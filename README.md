@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://science.nasa.gov/wp-content/uploads/2023/09/hubble-barredspiralgalaxyngc1300-potw2334a.jpg" alt="Galáxia espiral NGC 1300 — NASA/ESA Hubble" width="100%" />
+<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/NGC_4414_%28NASA-med%29.jpg/1280px-NGC_4414_%28NASA-med%29.jpg" alt="Galáxia espiral NGC 4414 — NASA/ESA Hubble" width="100%" />
 
 # ✦ COSMOS ✦
 
@@ -57,6 +57,24 @@ aproximar, **revelam suas formas reais** em 3D volumétrico.
 | Zoom | Pinça (2 dedos) ou `+` / `−` |
 | Viajar até o objeto | Botão **"Viajar até aqui"** ou tecla `G` |
 | Explorar (NASA Eyes) | Botão **🛰 Explorar** |
+
+## 🔬 A física por trás (o que torna surreal)
+
+O Cosmos não inventa o visual — ele aplica **fenômenos físicos reais** para criar a
+sensação de viajar pelo espaço de verdade:
+
+| Fenômeno | O que é | Como aparece |
+|---|---|---|
+| **Aberração da luz** | Perto da velocidade da luz, a luz à frente se "comprime" no seu campo de visão | Em alta velocidade, as estrelas viram **riscos** e formam um túnel — o efeito *warp*. |
+| **Efeito Doppler relativístico** | A luz de objetos se aproximando fica mais **azul**; se afastando, mais **vermelha** | Ao acelerar, o que vem na frente azula e o que fica atrás avermelha. |
+| **Geração procedural (ruído fractal)** | Estruturas naturais nascem de funções matemáticas em várias escalas | O gás das nebulosas e a poeira cósmica são *fbm* (fractional Brownian motion). |
+| **Renderização volumétrica (raymarching)** | A luz é integrada ponto a ponto ao atravessar um meio | É o que dá profundidade e densidade reais ao gás das nebulosas. |
+| **Escala proporcional** | Seu movimento relativo depende do tamanho do que está perto | Rápido no vazio, lento e preciso perto de objetos gigantes — o "efeito pirâmide". |
+| **Floating origin** | Truque para manter precisão numérica em distâncias enormes | Permite viajar distâncias cósmicas sem o mundo "tremer". |
+| **Órbitas (Kepler)** | Planetas orbitam suas estrelas | Os mundos dos sistemas estelares giram em torno do sol. |
+
+> O resultado: quanto mais rápido você vai, mais o universo se distorce ao seu redor —
+> exatamente como a relatividade prevê.
 
 ## 🛠️ Tecnologia
 
