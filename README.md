@@ -11,7 +11,7 @@ encontre buracos negros e sistemas estelares reais — com dados verdadeiros da 
 
 <br>
 
-[![Acessar o Cosmos](https://img.shields.io/badge/🚀_ENTRAR_NO_COSMOS-nebulosa--zeta.vercel.app-4f9cff?style=for-the-badge)](https://nebulosa-zeta.vercel.app)
+[![Acessar o Cosmos](https://img.shields.io/badge/🚀_ENTRAR_NO_COSMOS-cosmos--mauve--nu.vercel.app-4f9cff?style=for-the-badge)](https://cosmos-mauve-nu.vercel.app)
 
 ![Three.js](https://img.shields.io/badge/Three.js-WebGL-000000?style=flat-square&logo=three.js)
 ![NASA API](https://img.shields.io/badge/NASA-API_Oficial-0B3D91?style=flat-square&logo=nasa)
