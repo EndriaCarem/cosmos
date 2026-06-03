@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cosmos — Universo Infinito</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; cursor: grab; }
+    body:active { cursor: grabbing; }
+    #loading {
+      position: fixed; inset: 0; display: flex; align-items: center;
+      justify-content: center; color: #fff; font-family: system-ui, sans-serif;
+      letter-spacing: 2px; z-index: 20;
+    }
+    /* ---------- HUD MINIMALISTA (barra inferior clean) ---------- */
+    #hud {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+      display: flex; align-items: center; gap: 32px;
+      padding: 16px 24px; user-select: none; pointer-events: none;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(0deg, rgba(2,5,12,0.6), transparent);
+    }
+    #hud .item { display:flex; flex-direction:column; gap:2px; }
+    #hud .lbl { font-size:9.5px; letter-spacing:1.5px; text-transform:uppercase;
+      color: rgba(150,190,240,0.45); font-weight:500; }
+    #hud .val { font-size:15px; color:#eaf4ff; font-weight:300; letter-spacing:.3px; }
+    #hud .near { color:#ffd9a0; }
+    #hud .item.grow { flex:1; }
+    /* ---------- CONTROLE DE VELOCIDADE ---------- */
+    #throttle {
+      position: fixed; right: 22px; top: 50%; transform: translateY(-50%); z-index: 10;
+      display:flex; flex-direction:column; align-items:center; gap:10px;
+      font-family: system-ui, -apple-system, sans-serif; font-size:9px;
+      letter-spacing:1px; color:rgba(180,205,235,0.5); user-select:none;
+    }
+    #throttle input[type=range] {
+      writing-mode: vertical-lr; direction: rtl;
+      width: 5px; height: 140px; accent-color:#5a9aea; cursor:pointer;
+    }
+    #throttle .cap { text-transform:uppercase; }
+    #throttle .max { color:rgba(255,150,110,0.7); }
+    /* ---------- CARD DE IMAGEM REAL DA NASA ---------- */
+    #nasa {
+      position: fixed; right: 18px; top: 18px; z-index: 11;
+      width: 270px; opacity: 0; transform: translateY(-6px);
+      transition: opacity .4s, transform .4s; pointer-events: none;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: rgba(8,12,20,0.72); border:1px solid rgba(255,255,255,0.08);
+      border-radius: 16px; overflow: hidden; backdrop-filter: blur(16px);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+    #nasa.show { opacity: 1; transform: translateY(0); }
+    #nasa img { width:100%; height:160px; object-fit:cover; display:block; background:#05070d; }
+    #nasa .cap { padding:14px 16px 16px; }
+    #nasa .nm { color:#fff; font-size:15px; font-weight:600; margin-bottom:10px; letter-spacing:.2px; }
+    #nasa .meta { font-size:12px; }
+    #nasa .meta .frow { display:flex; justify-content:space-between; gap:12px; padding:5px 0;
+      border-bottom:1px solid rgba(255,255,255,0.05); }
+    #nasa .meta .frow:last-child { border-bottom:0; }
+    #nasa .meta .frow span { color:rgba(200,215,235,0.5); }
+    #nasa .meta .frow b { color:#eaf2ff; font-weight:500; }
+    #nasa .src { color:rgba(160,185,220,0.4); font-size:10px; margin-top:10px; letter-spacing:.3px; }
+    @media (max-width:560px){ #nasa{ width:180px; } #nasa img{height:110px;} }
+    /* ---------- BOTÃO EXPLORAR (canto superior esquerdo) ---------- */
+    #explore-btn {
+      position: fixed; top: 18px; left: 18px; z-index: 12;
+      font-family: system-ui, -apple-system, sans-serif; font-size: 13px; font-weight: 500;
+      color:#eaf2ff; background: rgba(8,12,20,0.6);
+      border:1px solid rgba(255,255,255,0.1); border-radius: 12px;
+      padding: 10px 16px; cursor: pointer; backdrop-filter: blur(16px);
+      transition: background .2s, border-color .2s; letter-spacing:.3px;
+    }
+    #explore-btn:hover { background: rgba(30,40,60,0.8); border-color: rgba(255,255,255,0.2); }
+    /* ---------- BOTÃO VIAJAR (dentro do card do objeto) ---------- */
+    #goto-btn {
+      width:100%; margin-top:12px; font-family: system-ui, -apple-system, sans-serif;
+      font-size: 13px; font-weight: 500; color:#fff;
+      background: rgba(70,120,200,0.85); border:0;
+      border-radius: 10px; padding: 10px; cursor: pointer; pointer-events:auto;
+      transition: background .2s;
+    }
+    #goto-btn:hover { background: rgba(90,145,230,1); }
+    /* ---------- OVERLAY (NASA Eyes e outras ferramentas) ---------- */
+    #overlay {
+      position: fixed; inset: 0; z-index: 50; display: none;
+      background: rgba(2,6,14,0.92); backdrop-filter: blur(4px);
+      flex-direction: column;
+    }
+    #overlay.show { display: flex; }
+    #overlay .bar {
+      display:flex; align-items:center; gap:14px; padding:12px 16px;
+      font-family: system-ui, sans-serif; color:#cfeaff;
+      border-bottom:1px solid rgba(90,180,255,0.2);
+    }
+    #overlay .bar .title { font-size:15px; font-weight:700; flex:1; }
+    #overlay .bar button {
+      font-family: system-ui, sans-serif; font-size:13px; color:#cfeaff;
+      background: rgba(40,70,110,0.6); border:1px solid rgba(120,200,255,0.4);
+      border-radius:8px; padding:7px 14px; cursor:pointer;
+    }
+    #overlay .bar button:hover { background: rgba(60,100,150,0.8); }
+    #overlay .tabs { display:flex; gap:8px; }
+    #overlay .tabs button.active { background: rgba(90,160,230,0.8); }
+    #overlay iframe { flex:1; width:100%; border:0; background:#000; }
+    /* ---------- MINIMAPA (radar de canto) ---------- */
+    #minimap {
+      position: fixed; top: 64px; left: 16px; z-index: 10;
+      width: 150px; height: 150px; border-radius: 50%;
+      border:1px solid rgba(90,180,255,0.3); background: rgba(6,14,26,0.55);
+      backdrop-filter: blur(6px);
+    }
+    /* ---------- CRÉDITO DISCRETO ---------- */
+    #credit {
+      position: fixed; bottom: 10px; right: 14px; z-index: 9;
+      font-family: system-ui, sans-serif; font-size: 11px; letter-spacing: .5px;
+      color: rgba(160,200,255,0.35); pointer-events: none; user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">carregando o cosmos…</div>
+
+  <!-- Crédito discreto -->
+  <div id="credit">por Endria Carem</div>
+
+  <!-- Botão que abre a área de exploração (não atrapalha a navegação) -->
+  <button id="explore-btn">🛰 Explorar</button>
+
+  <!-- Minimapa / radar: mostra os objetos ao redor e sua direção -->
+  <canvas id="minimap" width="150" height="150"></canvas>
+
+
+  <!-- Overlay com ferramentas reais da NASA (abre por cima, fecha e volta) -->
+  <div id="overlay">
+    <div class="bar">
+      <span class="title">Exploração — NASA</span>
+      <div class="tabs">
+        <button data-src="https://eyes.nasa.gov/apps/solar-system/#/home" class="active">☉ Sistema Solar</button>
+        <button data-src="https://eyes.nasa.gov/apps/asteroids/#/home">☄ Asteroides</button>
+        <button data-src="https://eyes.nasa.gov/apps/earth/">🌍 Terra</button>
+      </div>
+      <button id="overlay-close">✕ Voltar ao cosmos</button>
+    </div>
+    <iframe id="overlay-frame" src="" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
+  </div>
+
+  <!-- Card com a FOTO REAL da NASA do objeto que você encontrou -->
+  <div id="nasa">
+    <img id="nasa-img" alt="" />
+    <div class="cap">
+      <div class="nm" id="nasa-nm">—</div>
+      <div class="meta" id="nasa-meta"></div>
+      <button id="goto-btn">🚀 Viajar até aqui</button>
+      <div class="src">📷 NASA Image Library</div>
+    </div>
+  </div>
+
+  <!-- HUD minimalista (barra inferior) -->
+  <div id="hud">
+    <div class="item"><span class="lbl">Velocidade</span><span class="val" id="h-speed">0</span></div>
+    <div class="item"><span class="lbl">Distância</span><span class="val" id="h-dist">0 al</span></div>
+    <div class="item grow"><span class="lbl">Objeto próximo</span><span class="val near" id="h-near">—</span></div>
+    <!-- ocultos (ainda usados pelo código) -->
+    <span id="h-throt" hidden></span><span id="h-x" hidden></span>
+    <span id="h-y" hidden></span><span id="h-z" hidden></span>
+    <span id="h-fov" hidden></span><span id="h-obj" hidden></span>
+  </div>
+
+  <!-- Acelerador / controle de velocidade -->
+  <div id="throttle">
+    <span class="max">MÁX</span>
+    <input id="throttle-slider" type="range" min="0" max="100" value="0" step="1" />
+    <span class="cap">PARAR</span>
+    <span class="cap">⇅</span>
+  </div>
+
+  <script type="importmap">
+  { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  } }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass }     from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+    // ===================================================================
+    // CENA
+    // ===================================================================
+    const scene  = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(72, innerWidth/innerHeight, 0.1, 80000);
+    const renderer = new THREE.WebGLRenderer({ antialias:false });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.25));
+    document.body.appendChild(renderer.domElement);
+    scene.add(new THREE.AmbientLight(0x222233, 1));
+
+    // ===================================================================
+    // PÓS-PROCESSAMENTO: BLOOM (brilho/glow estilo Celestia)
+    // O bloom pega os pixels mais claros (estrelas, núcleos de nebulosa,
+    // sóis) e espalha um halo luminoso ao redor deles.
+    // ===================================================================
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    const bloom = new UnrealBloomPass(
+      new THREE.Vector2(innerWidth, innerHeight),
+      1.25,  // strength — brilho mais intenso e cinematográfico
+      0.85,  // radius   — halo mais espalhado e suave
+      0.0    // threshold — tudo brilha um pouco (vibe etérea)
+    );
+    composer.addPass(bloom);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;  // cores mais ricas/cinema
+    renderer.toneMappingExposure = 1.15;
+
+    // ===================================================================
+    // RUÍDO DETERMINÍSTICO: dada uma coordenada de célula, sempre devolve
+    // o MESMO resultado. É isso que torna o universo infinito e estável
+    // (você volta no mesmo lugar e o objeto continua lá).
+    // ===================================================================
+    function hash(x,y,z,s){
+      let h = x*374761393 + y*668265263 + z*2147483647 + s*982451653;
+      h = (h ^ (h>>13)) * 1274126177;
+      h = (h ^ (h>>16)) >>> 0;
+      return h / 4294967295;          // 0..1
+    }
+
+    // ===================================================================
+    // ESTRELAS DE FUNDO — campo infinito que acompanha a câmera, sempre
+    // existe ao redor. Dá a sensação de "muitas estrelas onde quer que eu vá".
+    // ===================================================================
+    // uWarp (0..1): intensidade do "túnel de luz" em alta velocidade.
+    // Em velocidade alta, as estrelas esticam e ganham tom azulado (Doppler).
+    const starMat = new THREE.ShaderMaterial({
+      uniforms:{ uTime:{value:0}, uWarp:{value:0} },
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+      vertexShader:`
+        attribute float aSize; attribute vec3 aColor;
+        uniform float uTime, uWarp; varying vec3 vColor; varying float vTw; varying float vStretch;
+        void main(){
+          // FÍSICA — Doppler: o que está à frente (z negativo na view) azula;
+          // atrás avermelha. Efeito relativístico simplificado.
+          vec4 mv=modelViewMatrix*vec4(position,1.0);
+          float ahead = clamp(-mv.z/2000.0, -1.0, 1.0);    // +1 frente, -1 trás
+          vec3 dop = mix(vColor, vColor*vec3(0.6,0.8,1.6), max(0.0,ahead)*uWarp);   // azula à frente
+          dop = mix(dop, dop*vec3(1.6,0.7,0.5), max(0.0,-ahead)*uWarp);             // avermelha atrás
+          vColor = dop;
+          vTw=0.7+0.3*sin(uTime*3.0+position.x*0.5+position.y);
+          // ABERRAÇÃO/WARP: estica o ponto na direção radial em alta velocidade
+          vStretch = uWarp;
+          gl_PointSize=aSize*(300.0/-mv.z)*(1.0+uWarp*2.0);
+          gl_Position=projectionMatrix*mv;
+        }`,
+      fragmentShader:`
+        precision highp float; varying vec3 vColor; varying float vTw; varying float vStretch;
+        void main(){
+          vec2 uv=gl_PointCoord-0.5;
+          // em warp, comprime no eixo X = vira um RISCO de luz (estrela esticada)
+          uv.x /= (1.0 - vStretch*0.85);
+          float r=length(uv);
+          float core=smoothstep(0.5,0.0,r); float glow=pow(core,3.0);
+          float a=core*0.6+glow; if(a<0.01) discard;
+          gl_FragColor=vec4(vColor*(0.6+glow)*vTw,a);
+        }`,
+    });
+
+    // Material das ESTRELAS-MARCADOR: igual ao starMat mas com PONTAS de luz
+    // (spikes em + ) — é isso que faz um ponto parecer ESTRELA, não bola.
+    const starMarkerMat = new THREE.ShaderMaterial({
+      uniforms:{ uTime:{value:0} },
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+      vertexShader:`
+        attribute float aSize; attribute vec3 aColor;
+        uniform float uTime; varying vec3 vColor; varying float vTw;
+        void main(){
+          vColor=aColor;
+          vTw=0.6+0.4*sin(uTime*2.5+position.x*0.3);
+          vec4 mv=modelViewMatrix*vec4(position,1.0);
+          gl_PointSize=aSize*(300.0/-mv.z);
+          gl_Position=projectionMatrix*mv;
+        }`,
+      fragmentShader:`
+        precision highp float; varying vec3 vColor; varying float vTw;
+        void main(){
+          vec2 uv=gl_PointCoord-0.5; float r=length(uv);
+          float core=smoothstep(0.35,0.0,r);             // núcleo apertado e nítido
+          float glow=pow(smoothstep(0.5,0.0,r),2.0)*0.5; // halo suave
+          // PONTAS de difração (cruz): faz parecer estrela de verdade
+          float spike = (1.0-smoothstep(0.0,0.02,abs(uv.x))) + (1.0-smoothstep(0.0,0.02,abs(uv.y)));
+          spike *= smoothstep(0.5,0.0,r)*0.6;
+          float a=core+glow+spike; if(a<0.01) discard;
+          gl_FragColor=vec4(vColor*(0.8+core)*vTw, a);
+        }`,
+    });
+
+    function makeStarfield(count, spread, baseSize){
+      const g=new THREE.BufferGeometry();
+      const pos=new Float32Array(count*3), sz=new Float32Array(count), col=new Float32Array(count*3);
+      const pal=[[0.7,0.8,1.0],[0.85,0.9,1.0],[1,1,1],[1,0.95,0.8],[1,0.8,0.6],[1,0.7,0.5]];
+      for(let i=0;i<count;i++){
+        pos[i*3]=(Math.random()-0.5)*spread;
+        pos[i*3+1]=(Math.random()-0.5)*spread;
+        pos[i*3+2]=(Math.random()-0.5)*spread;
+        sz[i]=Math.pow(Math.random(),4)*baseSize+1.5;
+        const c=pal[Math.floor(Math.random()*pal.length)];
+        col[i*3]=c[0]; col[i*3+1]=c[1]; col[i*3+2]=c[2];
+      }
+      g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+      g.setAttribute('aSize',new THREE.BufferAttribute(sz,1));
+      g.setAttribute('aColor',new THREE.BufferAttribute(col,3));
+      const m=new THREE.Points(g, starMat); m.frustumCulled=false; return m;
+    }
+    // três camadas de céu = muito mais profundidade e densidade estelar
+    const skyNear=makeStarfield(4000, 8000, 13);
+    const skyMid =makeStarfield(5000, 22000, 18);
+    const skyFar =makeStarfield(6000, 50000, 26);
+    scene.add(skyNear, skyMid, skyFar);
+
+    // ===================================================================
+    // FÁBRICAS DE OBJETOS (cada célula do espaço gera um destes)
+    // ===================================================================
+
+    // --- NEBULOSA: esfera de gás volumétrico, atravessável ---
+    function makeNebula(radius, color, color2){
+      const mat=new THREE.ShaderMaterial({
+        transparent:true, depthWrite:false, side:THREE.BackSide, blending:THREE.AdditiveBlending,
+        uniforms:{
+          uTime:{value:0}, uCam:{value:new THREE.Vector3()},
+          uColor:{value:new THREE.Vector3(...color)}, uColor2:{value:new THREE.Vector3(...color2)},
+          uRadius:{value:radius},
+        },
+        vertexShader:`
+          varying vec3 vWorld;
+          void main(){
+            vWorld=(modelMatrix*vec4(position,1.0)).xyz;
+            gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+          }`,
+        fragmentShader:`
+          precision highp float; varying vec3 vWorld;
+          uniform float uTime,uRadius; uniform vec3 uCam,uColor,uColor2;
+          vec3 hash3(vec3 p){
+            p=vec3(dot(p,vec3(127.1,311.7,74.7)),dot(p,vec3(269.5,183.3,246.1)),dot(p,vec3(113.5,271.9,124.6)));
+            return -1.0+2.0*fract(sin(p)*43758.5453123);
+          }
+          float noise(vec3 p){
+            vec3 i=floor(p),f=fract(p); vec3 u=f*f*f*(f*(f*6.0-15.0)+10.0);
+            return mix(mix(mix(dot(hash3(i+vec3(0,0,0)),f-vec3(0,0,0)),dot(hash3(i+vec3(1,0,0)),f-vec3(1,0,0)),u.x),
+                           mix(dot(hash3(i+vec3(0,1,0)),f-vec3(0,1,0)),dot(hash3(i+vec3(1,1,0)),f-vec3(1,1,0)),u.x),u.y),
+                       mix(mix(dot(hash3(i+vec3(0,0,1)),f-vec3(0,0,1)),dot(hash3(i+vec3(1,0,1)),f-vec3(1,0,1)),u.x),
+                           mix(dot(hash3(i+vec3(0,1,1)),f-vec3(0,1,1)),dot(hash3(i+vec3(1,1,1)),f-vec3(1,1,1)),u.x),u.y),u.z);
+          }
+          // fbm com MAIS oitavas = muito mais detalhe (filamentos, poeira)
+          float fbm(vec3 p){ float v=0.,a=.5; for(int i=0;i<6;i++){v+=a*noise(p);p*=2.03;a*=.5;} return v; }
+          void main(){
+            vec3 rd=normalize(vWorld-uCam);
+            vec3 center=(modelMatrix*vec4(0.,0.,0.,1.)).xyz;
+            vec3 col=vec3(0.); float transmit=1.0;
+            // RAYMARCHING ULTRA: 40 passos = nuvem densa e detalhada
+            float step=uRadius*2.0/40.0;
+            for(int i=0;i<40;i++){
+              vec3 wp=vWorld - rd*step*float(i);
+              vec3 lp=(wp-center)/uRadius;
+              float rad=length(lp);
+              float fall=1.0-smoothstep(0.3,1.0,rad);   // borda macia
+              if(fall<=0.0) continue;
+              // duas escalas de ruído: grande (estrutura) + fina (filamentos)
+              float big=fbm(lp*2.2+vec3(0.,0.,uTime*0.03));
+              float fine=fbm(lp*6.0-vec3(uTime*0.02,0.,0.));
+              float d=(big*0.65+fine*0.35)*0.5+0.5;
+              d=smoothstep(0.42,0.95,d)*fall;
+              // núcleo mais denso no centro (concentração de gás)
+              d*=mix(1.4,0.7,smoothstep(0.0,0.8,rad));
+              if(d>0.001){
+                // cor variando no espaço + brilho quente nos núcleos densos
+                vec3 c=mix(uColor,uColor2,0.5+0.5*sin(lp.x*2.5+lp.z*1.8+big*2.0+uTime*0.15));
+                c=mix(c,vec3(1.0,0.92,0.75),smoothstep(0.55,1.0,d)*0.5);
+                col+=c*d*transmit*0.42; transmit*=1.0-d*0.42;
+              }
+              if(transmit<0.02) break;
+            }
+            float a=1.0-transmit; if(a<0.01) discard;
+            gl_FragColor=vec4(col,a);
+          }`,
+      });
+      const mesh=new THREE.Mesh(new THREE.SphereGeometry(radius,20,20), mat);
+      mesh.frustumCulled=false; mesh.userData.mat=mat; mesh.userData.spin=true;
+      return mesh;
+    }
+
+    // --- GALÁXIA ESPIRAL — cada uma DIFERENTE (braços, abertura, núcleo) ---
+    function makeGalaxy(radius, color, color2, seed){
+      const N=9000, g=new THREE.BufferGeometry();
+      const pos=new Float32Array(N*3),col=new Float32Array(N*3),sz=new Float32Array(N);
+      // PARÂMETROS VARIÁVEIS por galáxia (seed) — é o que as diferencia:
+      const arms   = 2 + Math.floor(seed*4);          // 2 a 5 braços
+      const twist  = 0.012 + seed*0.04;               // quão fechada é a espiral
+      const spread = 0.25 + seed*0.6;                 // dispersão dos braços
+      const core   = 0.15 + seed*0.25;                // tamanho do bojo central
+      const flat   = 0.05 + (1-seed)*0.08;            // espessura do disco
+      for(let i=0;i<N;i++){
+        const isCore = Math.random() < core*0.7;      // parte das estrelas no bojo
+        let r, ang, h;
+        if(isCore){                                   // bojo esférico central
+          r = Math.pow(Math.random(),2)*radius*core;
+          ang = Math.random()*Math.PI*2;
+          h = (Math.random()-0.5)*r*0.8;
+        } else {                                       // braços espirais
+          r = Math.pow(Math.random(),0.6)*radius;
+          const arm = Math.floor(Math.random()*arms)/arms*Math.PI*2;
+          ang = arm + r*twist + (Math.random()-0.5)*spread;
+          h = (Math.random()-0.5)*radius*flat*(1-r/radius);
+        }
+        pos[i*3]=Math.cos(ang)*r+(Math.random()-0.5)*8;
+        pos[i*3+1]=h;
+        pos[i*3+2]=Math.sin(ang)*r+(Math.random()-0.5)*8;
+        const tc=r/radius;
+        col[i*3]=color2[0]*(1-tc)+color[0]*tc;
+        col[i*3+1]=color2[1]*(1-tc)+color[1]*tc;
+        col[i*3+2]=color2[2]*(1-tc)+color[2]*tc;
+        const b=(1-tc)*0.7+0.5; col[i*3]*=b; col[i*3+1]*=b; col[i*3+2]*=b;
+        sz[i]=Math.pow(Math.random(),3)*9+2;
+      }
+      g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+      g.setAttribute('aColor',new THREE.BufferAttribute(col,3));
+      g.setAttribute('aSize',new THREE.BufferAttribute(sz,1));
+      const m=new THREE.Points(g, starMat);
+      m.rotation.x=(seed-0.5)*1.2; m.rotation.z=(hash(seed*7,3,9,1)-0.5)*1.2;
+      m.frustumCulled=false; m.userData.galaxy=true;
+      return m;
+    }
+
+    // --- AGLOMERADO de estrelas ---
+    function makeCluster(radius, color){
+      const N=1800, g=new THREE.BufferGeometry();
+      const pos=new Float32Array(N*3),col=new Float32Array(N*3),sz=new Float32Array(N);
+      for(let i=0;i<N;i++){
+        const r=Math.pow(Math.random(),2)*radius;
+        const th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1);
+        pos[i*3]=r*Math.sin(ph)*Math.cos(th);
+        pos[i*3+1]=r*Math.sin(ph)*Math.sin(th);
+        pos[i*3+2]=r*Math.cos(ph);
+        col[i*3]=color[0]; col[i*3+1]=color[1]; col[i*3+2]=color[2];
+        sz[i]=Math.pow(Math.random(),2)*13+3;
+      }
+      g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+      g.setAttribute('aColor',new THREE.BufferAttribute(col,3));
+      g.setAttribute('aSize',new THREE.BufferAttribute(sz,1));
+      const m=new THREE.Points(g, starMat); m.frustumCulled=false; return m;
+    }
+
+    // ===================================================================
+    // TEXTURAS REAIS DE PLANETAS (mapas públicos da NASA, via CDN).
+    // Carregadas uma vez e reaproveitadas. Cada planeta recebe um tipo.
+    // ===================================================================
+    const texLoader = new THREE.TextureLoader();
+    texLoader.crossOrigin = 'anonymous';
+    const PLANET_TEX = {
+      rochoso:  'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/512px-The_Earth_seen_from_Apollo_17.jpg',
+      marte:    'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/512px-OSIRIS_Mars_true_color.jpg',
+      gasoso:   'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Jupiter_and_its_shrunken_Great_Red_Spot.jpg/512px-Jupiter_and_its_shrunken_Great_Red_Spot.jpg',
+      gelo:     'https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/Uranus2.jpg/480px-Uranus2.jpg',
+      lua:      'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/FullMoon2010.jpg/512px-FullMoon2010.jpg',
+      venus:    'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Venus-real_color.jpg/480px-Venus-real_color.jpg',
+    };
+    const texCache = {};
+    function planetTexture(type){
+      if(!texCache[type]) texCache[type] = texLoader.load(PLANET_TEX[type]);
+      return texCache[type];
+    }
+    const PLANET_TYPES = ['rochoso','marte','gasoso','gelo','lua','venus'];
+
+    // --- SISTEMA: sol + planetas. Se 'sys' (dados reais da NASA) vier,
+    //     usa o número e os tamanhos verdadeiros dos exoplanetas. ---
+    function makeSystem(radius, color, seed, sys){
+      const group=new THREE.Group();
+      const sun=new THREE.Mesh(new THREE.SphereGeometry(radius*0.25,20,20),
+        new THREE.MeshBasicMaterial({color:new THREE.Color(...color)}));
+      group.add(sun);
+      group.add(new THREE.Mesh(new THREE.SphereGeometry(radius*0.45,20,20),
+        new THREE.MeshBasicMaterial({color:new THREE.Color(...color),transparent:true,opacity:0.25,blending:THREE.AdditiveBlending})));
+      const planets=[];
+      // se temos dados reais: um corpo por planeta real, com tamanho proporcional
+      const realPlanets = sys?.planets || null;
+      const nP = realPlanets ? realPlanets.length : (3+Math.floor(seed*3));
+      for(let i=0;i<nP;i++){
+        const rp = realPlanets ? realPlanets[i] : null;
+        // raio do planeta: real (pl_rade em raios terrestres) ou procedural
+        const pr = rp && rp.rade
+          ? radius * Math.min(0.14, 0.02 + rp.rade*0.006)   // escala visual do tamanho real
+          : radius*(0.04+hash(i,seed*9,2,5)*0.06);
+        // TIPO/TEXTURA REAL: planetas maiores tendem a ser gasosos; varia por seed
+        let type;
+        if(rp && rp.rade){
+          type = rp.rade>6 ? 'gasoso' : (rp.rade>3 ? 'gelo' : PLANET_TYPES[Math.floor(hash(i,seed*5,7,3)*4)]);
+        } else {
+          type = PLANET_TYPES[Math.floor(hash(i,seed*9,2,5)*PLANET_TYPES.length)];
+        }
+        const p=new THREE.Mesh(new THREE.SphereGeometry(pr,24,24),
+          new THREE.MeshStandardMaterial({map:planetTexture(type), roughness:0.95, metalness:0.0}));
+        p.userData={dist:radius*(0.5+i*0.35), ang:hash(i,seed,4,8)*6.28, spd:0.3/(1+i),
+                    rot:0.2+hash(i,seed,1,2)*0.6, name: rp?rp.name:null};
+        group.add(p); planets.push(p);
+      }
+      group.add(new THREE.PointLight(0xffffff,2,radius*4));
+      group.userData.planets=planets; group.userData.sys=sys||null;
+      group.frustumCulled=false;
+      return group;
+    }
+
+    // --- ESTRELA SOLITÁRIA: uma estrela brilhante isolada no vazio ---
+    // Comuns no espaço real; dão o "preenchimento" entre os objetos raros.
+    function makeStar(radius, seed){
+      // tipo espectral pela cor: anã vermelha -> sol amarelo -> gigante azul
+      const types=[
+        {c:[1.0,0.5,0.4], n:'Anã vermelha'},
+        {c:[1.0,0.7,0.4], n:'Anã laranja'},
+        {c:[1.0,0.95,0.7],n:'Estrela amarela'},
+        {c:[1.0,1.0,0.95],n:'Estrela branca'},
+        {c:[0.7,0.85,1.0], n:'Gigante azul'},
+      ];
+      const ty=types[Math.floor(seed*types.length)];
+      // a estrela É um PONTO de luz com pontas (não esfera) — parece estrela.
+      const g=new THREE.BufferGeometry();
+      const sz = 10 + seed*30;   // brilho/tamanho variando por estrela
+      g.setAttribute('position',new THREE.BufferAttribute(new Float32Array([0,0,0]),3));
+      g.setAttribute('aSize',new THREE.BufferAttribute(new Float32Array([sz]),1));
+      g.setAttribute('aColor',new THREE.BufferAttribute(new Float32Array(ty.c),3));
+      const m=new THREE.Points(g, starMarkerMat);
+      m.frustumCulled=false;
+      m.userData.starName=ty.n;
+      m.userData.isStarPoint=true;   // não tem "forma 3D", é o ponto final
+      return m;
+    }
+
+    // --- BURACO NEGRO: esfera escura + disco de acreção brilhante girando ---
+    function makeBlackHole(radius, seed){
+      const group=new THREE.Group();
+      // horizonte de eventos: esfera negra
+      group.add(new THREE.Mesh(new THREE.SphereGeometry(radius*0.32,32,32),
+        new THREE.MeshBasicMaterial({color:0x000000})));
+      // anel de fóton: borda brilhante fininha ao redor do horizonte
+      const ring=new THREE.Mesh(new THREE.RingGeometry(radius*0.34,radius*0.40,64),
+        new THREE.MeshBasicMaterial({color:0xffddaa,side:THREE.DoubleSide,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending,depthWrite:false}));
+      ring.rotation.x=Math.PI/2; group.add(ring);
+      // disco de acreção: partículas em órbita, quentes no interior
+      const N=4000, g=new THREE.BufferGeometry();
+      const pos=new Float32Array(N*3),col=new Float32Array(N*3),sz=new Float32Array(N);
+      for(let i=0;i<N;i++){
+        const rr=radius*(0.45+Math.pow(Math.random(),1.5)*1.4);
+        const a=Math.random()*Math.PI*2;
+        pos[i*3]=Math.cos(a)*rr;
+        pos[i*3+1]=(Math.random()-0.5)*radius*0.05; // disco bem fino
+        pos[i*3+2]=Math.sin(a)*rr;
+        const tc=(rr/(radius*1.85));                 // 0 interno -> 1 externo
+        // interior branco-azulado quente -> exterior laranja-vermelho
+        const c=[1.0, 0.5+0.5*(1-tc), 0.2+0.6*(1-tc)];
+        col[i*3]=c[0]; col[i*3+1]=c[1]; col[i*3+2]=c[2];
+        sz[i]=Math.pow(Math.random(),2)*8+2;
+      }
+      g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+      g.setAttribute('aColor',new THREE.BufferAttribute(col,3));
+      g.setAttribute('aSize',new THREE.BufferAttribute(sz,1));
+      const disk=new THREE.Points(g, starMat);
+      group.add(disk);
+      group.userData.accretion=disk;       // gira no loop
+      group.frustumCulled=false;
+      return group;
+    }
+
+    // ===================================================================
+    // O UNIVERSO INFINITO POR CHUNKS
+    // O espaço é uma grade 3D de células de tamanho CELL. Cada célula é
+    // examinada pela função hash() -> decide se tem objeto, qual tipo,
+    // posição, raio e cor. Sempre o mesmo resultado pra mesma célula.
+    // A cada quadro: geramos as células perto da câmera, removemos as longe.
+    // ===================================================================
+    const CELL = 6000;         // células GIGANTES: muito vazio entre objetos (escala real)
+    const VIEW = 3;            // alcance de visão (3 = 7x7x7 células de 6000 = vê MUITO longe)
+    const active = new Map();  // "x,y,z" -> objeto Three.js (ou null se vazia)
+
+    const palettes = [
+      { c:[0.9,0.25,0.6],  c2:[0.3,0.4,1.0] },   // rosa-azul
+      { c:[0.2,0.9,0.6],   c2:[0.9,0.9,0.3] },   // verde-dourado
+      { c:[1.0,0.3,0.3],   c2:[1.0,0.7,0.2] },   // vermelho-laranja
+      { c:[0.6,0.4,1.0],   c2:[0.4,0.9,1.0] },   // violeta-ciano
+      { c:[0.9,0.5,0.9],   c2:[0.5,0.9,1.0] },   // magenta-azul
+    ];
+
+    // ===================================================================
+    // CATÁLOGO REAL — objetos astronômicos verdadeiros (nome, distância em
+    // anos-luz e descrição). Dados de catálogos públicos (NASA/ESA/Messier).
+    // Cada objeto procedural recebe a identidade de um destes, escolhido de
+    // forma determinística pela posição da célula.
+    // ===================================================================
+    const REAL = {
+      Nebulosa: [
+        {n:'Nebulosa de Órion (M42)', d:1344, mag:4.0, cons:'Órion', desc:1610},
+        {n:'Nebulosa da Águia (M16)', d:7000, mag:6.0, cons:'Serpente', desc:1745},
+        {n:'Nebulosa do Caranguejo (M1)', d:6500, mag:8.4, cons:'Touro', desc:1731},
+        {n:'Nebulosa Cabeça de Cavalo', d:1500, mag:6.8, cons:'Órion', desc:1888},
+        {n:'Nebulosa da Lagoa (M8)', d:4100, mag:6.0, cons:'Sagitário', desc:1654},
+        {n:'Nebulosa da Hélice', d:655, mag:7.6, cons:'Aquário', desc:1824},
+        {n:'Nebulosa do Anel (M57)', d:2300, mag:8.8, cons:'Lira', desc:1779},
+        {n:'Nebulosa Carina (NGC 3372)', d:8500, mag:1.0, cons:'Carina', desc:1752},
+        {n:'Nebulosa Roseta', d:5200, mag:9.0, cons:'Monoceros', desc:1880},
+        {n:'Nebulosa da Tarântula', d:161000, mag:8.0, cons:'Dourado', desc:1751},
+      ],
+      Galáxia: [
+        {n:'Galáxia de Andrômeda (M31)', d:2537000, mag:3.4, cons:'Andrômeda', desc:964},
+        {n:'Galáxia do Triângulo (M33)', d:2730000, mag:5.7, cons:'Triângulo', desc:1764},
+        {n:'Galáxia do Redemoinho (M51)', d:23000000, mag:8.4, cons:'Cães de Caça', desc:1773},
+        {n:'Galáxia do Sombrero (M104)', d:29300000, mag:8.0, cons:'Virgem', desc:1781},
+        {n:'Galáxia do Cata-vento (M101)', d:21000000, mag:7.9, cons:'Ursa Maior', desc:1781},
+        {n:'Galáxia do Charuto (M82)', d:11500000, mag:8.4, cons:'Ursa Maior', desc:1774},
+      ],
+      'Buraco negro': [
+        {n:'Sagitário A*', d:26000, mag:'—', cons:'Sagitário', desc:1974},
+        {n:'M87*', d:53000000, mag:'—', cons:'Virgem', desc:2019},
+        {n:'Cygnus X-1', d:7200, mag:8.95, cons:'Cisne', desc:1964},
+        {n:'TON 618', d:18200000000, mag:15.9, cons:'Cães de Caça', desc:1957},
+      ],
+      Aglomerado: [
+        {n:'Plêiades (M45)', d:444, mag:1.6, cons:'Touro', desc:'Antiguidade'},
+        {n:'Híades', d:153, mag:0.5, cons:'Touro', desc:'Antiguidade'},
+        {n:'Aglomerado de Hércules (M13)', d:22200, mag:5.8, cons:'Hércules', desc:1714},
+        {n:'Aglomerado Duplo de Perseu', d:7500, mag:4.3, cons:'Perseu', desc:'Antiguidade'},
+        {n:'Omega Centauri', d:17000, mag:3.9, cons:'Centauro', desc:1677},
+      ],
+      'Sistema estelar': [
+        {n:'Sistema Alfa Centauri', d:4.37, mag:-0.27, cons:'Centauro', desc:1915},
+        {n:'Sistema TRAPPIST-1', d:39, mag:18.8, cons:'Aquário', desc:2016},
+        {n:'Sistema Kepler-90', d:2545, mag:14.0, cons:'Dragão', desc:2013},
+        {n:'Sistema 51 Pegasi', d:50, mag:5.49, cons:'Pégaso', desc:1995},
+        {n:'Estrela de Barnard', d:5.96, mag:9.5, cons:'Ofiúco', desc:1916},
+      ],
+    };
+    // escolhe (determinístico) um objeto real do catálogo para a categoria
+    function pickReal(category, seed){
+      const list = REAL[category];
+      if(!list) return null;
+      return list[Math.floor(seed*list.length) % list.length];
+    }
+
+    // ===================================================================
+    // EXOPLANETAS REAIS (NASA Exoplanet Archive) — carregados uma vez.
+    // Agrupamos por estrela hospedeira: cada sistema real vira um item com
+    // {host, dist, planets:[{name, rade, orbper}]}. Esses sistemas reais são
+    // atribuídos aos sistemas estelares que você encontra no cosmos.
+    // ===================================================================
+    let EXOSYS = [];   // preenchido pela API; até lá, sistemas usam dados procedurais
+    async function loadExoplanets(){
+      try{
+        const r = await fetch('/api/nasa?type=exoplanets');
+        const rows = await r.json();
+        const byHost = new Map();
+        for(const p of rows){
+          if(!p.hostname) continue;
+          if(!byHost.has(p.hostname))
+            byHost.set(p.hostname, {host:p.hostname, dist:p.sy_dist, planets:[]});
+          byHost.get(p.hostname).planets.push({name:p.pl_name, rade:p.pl_rade, orbper:p.pl_orbper});
+        }
+        // só sistemas com 2+ planetas ficam mais interessantes; ordena por distância
+        EXOSYS = [...byHost.values()]
+          .filter(s=>s.planets.length>=1)
+          .sort((a,b)=>(a.dist||1e9)-(b.dist||1e9))
+          .slice(0,300);
+        console.log('Exoplanetas reais carregados:', EXOSYS.length, 'sistemas');
+      }catch(e){ console.warn('Falha ao carregar exoplanetas:', e); }
+    }
+    loadExoplanets();   // dispara o carregamento (não bloqueia o cosmos)
+
+    function buildCell(cx,cy,cz){
+      const key=cx+','+cy+','+cz;
+      if(active.has(key)) return;
+
+      // ~16% das células têm objeto (era 10%): vazio ainda domina, mas você
+      // cruza com coisas com mais frequência.
+      const present = hash(cx,cy,cz,1);
+      if(present > 0.16){ active.set(key,null); return; }
+
+      const r1=hash(cx,cy,cz,2), r2=hash(cx,cy,cz,3), r3=hash(cx,cy,cz,4);
+      const r4=hash(cx,cy,cz,5), seed=hash(cx,cy,cz,6);
+      // SEEDS INDEPENDENTES p/ quebrar repetição (cor, variação, estrela)
+      const seedCol=hash(cx,cy,cz,8), seedVar=hash(cx,cy,cz,9), seedStar=hash(cx,cy,cz,10);
+      // posição dentro da célula (com margem pra não colar nas bordas)
+      const ox=(r1-0.5)*CELL*0.6, oy=(r2-0.5)*CELL*0.6, oz=(r3-0.5)*CELL*0.6;
+      const wx=cx*CELL+ox, wy=cy*CELL+oy, wz=cz*CELL+oz;
+      const pal=palettes[Math.floor(seedCol*palettes.length)];   // cor independente
+
+      // DISTRIBUIÇÃO: mais variada, nebulosa bem mais presente (era 6% -> 18%).
+      let obj, kind, radius;
+      if(r4<0.38){               // 38% — estrela solitária
+        radius=120+seedVar*120; obj=makeStar(radius, seedStar); kind=obj.userData.starName;
+      } else if(r4<0.55){        // 17% — sistema estelar (sol + planetas REAIS se disponíveis)
+        radius=120+seedVar*80;
+        const exo = EXOSYS.length ? EXOSYS[Math.floor(hash(cx,cy,cz,11)*EXOSYS.length)] : null;
+        obj=makeSystem(radius, pal.c, seedVar, exo);
+        kind = exo ? exo.host : 'Sistema estelar';
+      } else if(r4<0.70){        // 15% — aglomerado de estrelas
+        radius=160+seedVar*140; obj=makeCluster(radius, pal.c2); kind='Aglomerado';
+      } else if(r4<0.88){        // 18% — NEBULOSA (agora comum o bastante p/ encontrar)
+        radius=260+seedVar*260; obj=makeNebula(radius, pal.c, pal.c2); kind='Nebulosa';
+      } else if(r4<0.96){        // 8%  — galáxia distante
+        radius=350+seedVar*250; obj=makeGalaxy(radius, pal.c, pal.c2, seedVar); kind='Galáxia';
+      } else {                   // 4%  — buraco negro (raro e marcante)
+        radius=200+seedVar*180; obj=makeBlackHole(radius, seedVar); kind='Buraco negro';
+      }
+      // IDENTIDADE REAL: dá nome/distância/descrição verdadeiros (do catálogo)
+      // usando um segundo hash da célula, pra ser estável e variado.
+      const realSeed = hash(cx,cy,cz,7);
+      let real = pickReal(kind, realSeed);
+      // se for um sistema com exoplanetas reais, monta a "identidade real" dele
+      if(obj.userData.sys){
+        const s = obj.userData.sys;
+        real = { n:'Sistema '+s.host, d: s.dist||0,
+                 info: s.planets.length+' planeta(s) real(is): '+s.planets.slice(0,4).map(p=>p.name).join(', ') };
+      }
+
+      // FLOATING ORIGIN: guardamos a posição LÓGICA (mundo) do objeto.
+      // A posição visual (obj.position) é recalculada todo quadro = wx - camPos.
+      obj.userData.worldPos = new THREE.Vector3(wx,wy,wz);
+      obj.userData.kind = kind; obj.userData.radius = radius;
+      obj.userData.real = real;   // {n, d, info} ou null
+
+      // ============ REVELAÇÃO POR DISTÂNCIA ============
+      // De LONGE, todo objeto é só um PONTO DE LUZ (estrela). O 3D real
+      // (nebulosa/galáxia/etc) começa invisível e só aparece ao se aproximar.
+      // Estrelas solitárias não têm "forma escondida" — elas já são o ponto.
+      const isPlainStar = kind === obj.userData.starName;
+      if(!isPlainStar){
+        obj.visible = false;            // esconde o 3D real até chegar perto
+        // marcador: uma estrela que representa o objeto à distância
+        const mk = makeMarker(pal.c, seedVar);
+        mk.userData.worldPos = obj.userData.worldPos;
+        mk.userData.isMarker = true;
+        mk.userData.target = obj;        // objeto 3D que ele revela
+        scene.add(mk);
+        obj.userData.marker = mk;
+        markers.push(mk);
+      }
+
+
+      obj.position.set(wx-camPos.x, wy-camPos.y, wz-camPos.z);
+      scene.add(obj);
+      active.set(key, obj);
+    }
+
+    // marcadores ativos (pontos de luz que viram objetos ao chegar)
+    const markers = [];
+    // cria uma ESTRELA vista de longe — tamanho/brilho variados por objeto,
+    // usando o material com pontas (starMarkerMat) pra não parecer "bola".
+    function makeMarker(color, sizeSeed){
+      const g=new THREE.BufferGeometry();
+      const sz = 6 + (sizeSeed||0.5)*16;   // varia de ~6 a ~22 (quebra a repetição)
+      g.setAttribute('position',new THREE.BufferAttribute(new Float32Array([0,0,0]),3));
+      g.setAttribute('aSize',new THREE.BufferAttribute(new Float32Array([sz]),1));
+      g.setAttribute('aColor',new THREE.BufferAttribute(new Float32Array(color),3));
+      const m=new THREE.Points(g, starMarkerMat);
+      m.frustumCulled=false;
+      return m;
+    }
+
+    function updateChunks(){
+      const ccx=Math.round(camPos.x/CELL), ccy=Math.round(camPos.y/CELL), ccz=Math.round(camPos.z/CELL);
+      // cria as células próximas
+      for(let x=ccx-VIEW;x<=ccx+VIEW;x++)
+        for(let y=ccy-VIEW;y<=ccy+VIEW;y++)
+          for(let z=ccz-VIEW;z<=ccz+VIEW;z++)
+            buildCell(x,y,z);
+      // remove as longe
+      for(const [key,obj] of active){
+        const [x,y,z]=key.split(',').map(Number);
+        if(Math.abs(x-ccx)>VIEW+1 || Math.abs(y-ccy)>VIEW+1 || Math.abs(z-ccz)>VIEW+1){
+          if(obj){
+            // remove também o marcador associado
+            const mk=obj.userData.marker;
+            if(mk){ scene.remove(mk); mk.geometry?.dispose?.();
+              const idx=markers.indexOf(mk); if(idx>=0) markers.splice(idx,1); }
+            scene.remove(obj);
+            obj.geometry?.dispose?.(); obj.material?.dispose?.();
+            obj.traverse?.(o=>{o.geometry?.dispose?.(); o.material?.dispose?.();});
+          }
+          active.delete(key);
+        }
+      }
+    }
+
+    // ===================================================================
+    // NAVEGAÇÃO
+    // ===================================================================
+    // Orientação por quaternion (estilo Celestia: rotaciona livre, sem travar
+    // de cabeça pra baixo). Velocidade e rotação têm INÉRCIA suave.
+    const camPos=new THREE.Vector3(0,0,0);
+    const camQuat=new THREE.Quaternion();              // orientação atual
+    let dragging=false,lastX=0,lastY=0;
+    let yawVel=0, pitchVel=0;                           // velocidade angular (inércia)
+    let speed=0, targetSpeed=0;                         // velocidade linear suavizada
+    let throttle=0;                                     // 0..1 (acelerador da nave)
+    const MAX_SPEED=2200;                               // máximo bem alto: cruzar o vazio enorme
+    let distTotal=0;                                    // distância acumulada (estatística)
+    let proxDist=Infinity;                              // distância ao objeto mais próximo (freio auto)
+    let proxNear=null;                                  // o objeto mais próximo (p/ escala)
+
+    // Slider de acelerador (controle de velocidade contínuo, do 0 ao MÁX)
+    const slider=document.getElementById('throttle-slider');
+    slider.addEventListener('input',()=>{ throttle = slider.value/100; });
+
+    addEventListener('mousedown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY;});
+    addEventListener('mouseup',()=>dragging=false);
+    addEventListener('mousemove',e=>{
+      if(!dragging)return;
+      yawVel   += -(e.clientX-lastX)*0.00025;
+      pitchVel += -(e.clientY-lastY)*0.00025;
+      lastX=e.clientX; lastY=e.clientY;
+    });
+    // scroll define a VELOCIDADE de cruzeiro (você decide quanto avançar)
+    addEventListener('wheel',e=>{ if(e.ctrlKey)return; targetSpeed += e.deltaY*-0.02; targetSpeed=Math.max(0,targetSpeed); },{passive:true});
+    const keys={};
+    addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);
+    addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+    // FOV: zoom de câmera. Menor FOV = mais perto (zoom in). Maior = mais longe.
+    let fov=72, targetFov=72;
+    const FOV_MIN=18, FOV_MAX=95;
+
+    let pinchDist=0; // distância entre os dois dedos no gesto anterior
+    function dist2(t){ return Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY); }
+
+    addEventListener('touchstart',e=>{
+      if(e.touches.length===2){ dragging=false; pinchDist=dist2(e.touches); }
+      else { dragging=true; lastX=e.touches[0].clientX; lastY=e.touches[0].clientY; }
+    },{passive:true});
+    addEventListener('touchend',()=>{ dragging=false; pinchDist=0; });
+    addEventListener('touchmove',e=>{
+      if(e.touches.length===2){
+        // PINÇA: dois dedos = zoom (aproxima/afasta a imagem)
+        const d=dist2(e.touches);
+        if(pinchDist>0){
+          targetFov -= (d - pinchDist)*0.15;          // abrir dedos -> FOV menor -> zoom in
+          targetFov = Math.max(FOV_MIN, Math.min(FOV_MAX, targetFov));
+        }
+        pinchDist=d;
+        return;
+      }
+      if(!dragging)return;
+      yawVel   += -(e.touches[0].clientX-lastX)*0.0003;
+      pitchVel += -(e.touches[0].clientY-lastY)*0.0003;
+      lastX=e.touches[0].clientX; lastY=e.touches[0].clientY;
+    },{passive:true});
+
+    // Trackpad de Mac: gesto de pinça vem como wheel + ctrlKey
+    addEventListener('wheel',e=>{
+      if(e.ctrlKey){ targetFov += e.deltaY*0.3; targetFov=Math.max(FOV_MIN,Math.min(FOV_MAX,targetFov)); }
+    },{passive:true});
+    // tecla +/- também dá zoom
+    addEventListener('keydown',e=>{
+      if(e.key==='=' || e.key==='+') targetFov=Math.max(FOV_MIN,targetFov-6);
+      if(e.key==='-' || e.key==='_') targetFov=Math.min(FOV_MAX,targetFov+6);
+    });
+
+    // ===================================================================
+    // LOOP
+    // ===================================================================
+    const clock=new THREE.Clock();
+    document.getElementById('loading').remove();
+    updateChunks(); // primeira leva de objetos
+
+    // ===================================================================
+    // PAINEL DA NAVE — formata e exibe as estatísticas em tempo real.
+    // 1 unidade do mundo ≈ 1 ano-luz (al), só pra dar uma escala "real".
+    // ===================================================================
+    const els = {
+      speed:document.getElementById('h-speed'), throt:document.getElementById('h-throt'),
+      dist:document.getElementById('h-dist'),  x:document.getElementById('h-x'),
+      y:document.getElementById('h-y'),        z:document.getElementById('h-z'),
+      fov:document.getElementById('h-fov'),     obj:document.getElementById('h-obj'),
+      near:document.getElementById('h-near'),
+    };
+    // formata número grande com sufixo (mil, mi, bi, tri)
+    function big(n){
+      const a=Math.abs(n);
+      if(a>=1e12) return (n/1e12).toFixed(2)+' tri';
+      if(a>=1e9)  return (n/1e9 ).toFixed(2)+' bi';
+      if(a>=1e6)  return (n/1e6 ).toFixed(2)+' mi';
+      if(a>=1e3)  return (n/1e3 ).toFixed(1)+' mil';
+      return Math.round(n).toString();
+    }
+    // Escala logarítmica p/ posição: em vez de "12.483.920 al", mostra a
+    // ordem de grandeza ("1.2×10⁷ al") — legível em qualquer escala cósmica.
+    const SUP = {'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+    function sup(n){ return String(n).split('').map(ch=>SUP[ch]||ch).join(''); }
+    function logScale(v){
+      const a=Math.abs(v);
+      if(a<1000) return Math.round(v)+' al';
+      const exp=Math.floor(Math.log10(a));
+      const mant=(v/Math.pow(10,exp)).toFixed(1);
+      return mant+'×10'+sup(exp)+' al';
+    }
+    let hudTick=0;
+    function updateHUD(speed, throttle, dist, pos, fov, count, near, nearD){
+      if(hudTick++ % 4) return;                  // atualiza ~15x/s (clean, alivia o DOM)
+      // velocidade em "× luz" (sensação de nave), simples
+      const c = speed * 1.2;
+      els.speed.textContent = c<1 ? Math.round(c*1000)+' km/s' : big(c)+'× luz';
+      els.dist.textContent  = big(dist)+' al';
+      if(near){
+        const inside = nearD < 0;
+        const real = near.userData.real;
+        const nome = real ? real.n : near.userData.kind;
+        els.near.textContent = inside ? 'dentro · '+nome : nome+' · '+big(nearD)+' al';
+        els.near.style.color = inside ? '#7dffb0' : '#ffd9a0';
+      } else els.near.textContent = '—';
+    }
+
+    // ===================================================================
+    // FOTO REAL DA NASA — busca a imagem verdadeira do objeto encontrado,
+    // via nossa função serverless segura (/api/nasa). Cacheia o que já buscou.
+    // ===================================================================
+    const nasaCard = document.getElementById('nasa');
+    const nasaImg  = document.getElementById('nasa-img');
+    const nasaNm   = document.getElementById('nasa-nm');
+    const nasaMeta = document.getElementById('nasa-meta');
+    const nasaCache = new Map();     // nome -> url da imagem (ou null se não achou)
+    let nasaShownFor = null;         // objeto atualmente exibido
+
+    // a NASA busca em INGLÊS — traduz o nome PT do catálogo pro termo certo.
+    const NASA_TERMS = {
+      'Nebulosa de Órion (M42)':'Orion Nebula', 'Nebulosa da Águia (M16)':'Eagle Nebula',
+      'Nebulosa do Caranguejo (M1)':'Crab Nebula', 'Nebulosa Cabeça de Cavalo':'Horsehead Nebula',
+      'Nebulosa da Lagoa (M8)':'Lagoon Nebula', 'Nebulosa da Hélice':'Helix Nebula',
+      'Nebulosa do Anel (M57)':'Ring Nebula', 'Nebulosa Carina':'Carina Nebula',
+      'Nebulosa Roseta':'Rosette Nebula', 'Nebulosa da Tarântula':'Tarantula Nebula',
+      'Galáxia de Andrômeda (M31)':'Andromeda Galaxy', 'Galáxia do Triângulo (M33)':'Triangulum Galaxy',
+      'Galáxia do Redemoinho (M51)':'Whirlpool Galaxy', 'Galáxia do Sombrero (M104)':'Sombrero Galaxy',
+      'Galáxia do Cata-vento (M101)':'Pinwheel Galaxy', 'Galáxia do Charuto (M82)':'Cigar Galaxy M82',
+      'Sagitário A*':'Sagittarius A black hole', 'M87*':'M87 black hole', 'Cygnus X-1':'Cygnus X-1',
+      'TON 618':'quasar', 'Plêiades (M45)':'Pleiades', 'Híades':'Hyades cluster',
+      'Aglomerado de Hércules (M13)':'Hercules cluster M13', 'Aglomerado Duplo de Perseu':'Double Cluster Perseus',
+      'Omega Centauri':'Omega Centauri',
+    };
+    async function fetchNasaImage(real){
+      if(nasaCache.has(real.n)) return nasaCache.get(real.n);
+      nasaCache.set(real.n, null);   // marca como "buscando" pra não repetir
+      try{
+        // termo em inglês (mapa) ou nome cru + dica de contexto p/ exoplanetas
+        let q = NASA_TERMS[real.n];
+        if(!q) q = real.n.replace(/^Sistema\s+/,'').replace(/\(.*?\)/g,'').trim()+' galaxy nebula';
+        const r = await fetch('/api/nasa?type=search&q='+encodeURIComponent(q));
+        const data = await r.json();
+        const items = data?.collection?.items || [];
+        // cada item tem VÁRIOS links: [0] é collection.json, os outros são as
+        // imagens (~small.jpg, ~thumb.jpg). Procuramos a 1ª imagem real.
+        let url = null;
+        for(const it of items){
+          for(const lk of (it.links||[])){
+            if(/\.(jpg|jpeg|png)$/i.test(lk.href||'')){ url = lk.href; break; }
+          }
+          if(url) break;
+        }
+        nasaCache.set(real.n, url);
+        return url;
+      }catch(e){ return null; }
+    }
+
+    // se a imagem falhar ao carregar, esconde o <img> mas mantém o texto
+    nasaImg.addEventListener('error', ()=>{ nasaImg.style.display='none'; });
+    nasaImg.addEventListener('load',  ()=>{ nasaImg.style.display='block'; });
+
+    function maybeShowNasa(near, nearD){
+      const real = near?.userData?.real;
+      // mostra quando está perto (zona ampla: 8000) de QUALQUER objeto com nome
+      if(real && nearD < 8000){
+        if(nasaShownFor !== real.n){
+          nasaShownFor = real.n;
+          nasaNm.textContent = real.n;
+          // FICHA TÉCNICA estilo NASA: monta as linhas de dados disponíveis
+          const rows = [];
+          rows.push(['Tipo', near.userData.kind]);
+          rows.push(['Distância', big(real.d)+' anos-luz']);
+          if(real.mag!=null)  rows.push(['Magnitude', real.mag]);
+          if(real.cons)       rows.push(['Constelação', real.cons]);
+          if(real.desc)       rows.push(['Descoberta', real.desc]);
+          nasaMeta.innerHTML = rows.map(([k,v])=>
+            `<div class="frow"><span>${k}</span><b>${v}</b></div>`).join('');
+          nasaImg.style.display='none';
+          nasaImg.removeAttribute('src');
+          nasaCard.classList.add('show');         // mostra a ficha já
+          fetchNasaImage(real).then(url=>{
+            if(nasaShownFor!==real.n) return;     // já mudou de objeto
+            if(url){ nasaImg.src=url; }           // carrega a foto (load->mostra)
+          });
+        }
+      } else {
+        nasaShownFor = null;
+        nasaCard.classList.remove('show');
+      }
+    }
+
+    // ===================================================================
+    // ÁREA DE EXPLORAÇÃO — overlay com NASA Eyes (embutido). Abre por cima
+    // do cosmos; enquanto aberto, PAUSA a navegação pra não vagar no escuro.
+    // ===================================================================
+    let paused = false;
+    const overlay = document.getElementById('overlay');
+    const frame   = document.getElementById('overlay-frame');
+    const exploreBtn = document.getElementById('explore-btn');
+    const DEFAULT_SRC = 'https://eyes.nasa.gov/apps/solar-system/#/home';
+
+    function openOverlay(src){
+      frame.src = src || DEFAULT_SRC;
+      overlay.classList.add('show');
+      paused = true;                 // congela o cosmos enquanto explora
+      throttle = 0;                  // zera o acelerador
+    }
+    function closeOverlay(){
+      overlay.classList.remove('show');
+      frame.src = 'about:blank';     // descarrega o NASA Eyes (libera recursos)
+      paused = false;                // volta a vagar
+    }
+    exploreBtn.addEventListener('click', ()=>openOverlay());
+    document.getElementById('overlay-close').addEventListener('click', closeOverlay);
+    // troca de aba (Sistema Solar / Asteroides / Terra)
+    for(const b of overlay.querySelectorAll('.tabs button')){
+      b.addEventListener('click', ()=>{
+        overlay.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        frame.src = b.dataset.src;
+      });
+    }
+    // Esc fecha o overlay
+    addEventListener('keydown', e=>{ if(e.key==='Escape' && overlay.classList.contains('show')) closeOverlay(); });
+
+    // ===================================================================
+    // PILOTO AUTOMÁTICO (tecla G / botão "Ir"): viaja até o objeto mais
+    // próximo automaticamente — gira a nave pra ele e voa até chegar dentro.
+    // Resolve o "nunca chego em nada": você não precisa mirar perfeito.
+    // ===================================================================
+    let autoTarget = null;          // objeto-alvo do piloto automático
+    function gotoNearest(){
+      if(!lastNearObj) return;
+      autoTarget = lastNearObj;
+      throttle = 0;                 // o piloto controla a velocidade sozinho
+    }
+    addEventListener('keydown', e=>{ if(e.key.toLowerCase()==='g') gotoNearest(); });
+    document.getElementById('goto-btn').addEventListener('click', gotoNearest);
+    let lastNearObj = null;         // atualizado no loop (objeto mais próximo)
+    const gotoBtn = document.getElementById('goto-btn');
+
+    // ===================================================================
+    // MINIMAPA (radar): vista de cima mostrando objetos ao redor + sua
+    // direção. Cores por tipo. Centro = você.
+    // ===================================================================
+    const mmCanvas = document.getElementById('minimap');
+    const mm = mmCanvas.getContext('2d');
+    const MM_RANGE = 12000;   // alcance do radar em unidades do mundo
+    const KIND_COLOR = {
+      'Nebulosa':'#e87ab0', 'Galáxia':'#9fd0ff', 'Aglomerado':'#fff0a0',
+      'Buraco negro':'#ff8a5c', 'Sistema estelar':'#b0ffd0',
+    };
+    function drawMinimap(){
+      const W=150, R=W/2;
+      mm.clearRect(0,0,W,W);
+      // anel e cruz de referência
+      mm.strokeStyle='rgba(90,180,255,0.15)';
+      mm.beginPath(); mm.arc(R,R,R-2,0,7); mm.stroke();
+      mm.beginPath(); mm.moveTo(R,4); mm.lineTo(R,W-4); mm.moveTo(4,R); mm.lineTo(W-4,R); mm.stroke();
+      // direção pra onde a nave aponta (seta no centro)
+      const fwd = new THREE.Vector3(0,0,-1).applyQuaternion(camQuat);
+      const fa = Math.atan2(fwd.x, -fwd.z);   // ângulo no plano horizontal
+      mm.save(); mm.translate(R,R); mm.rotate(-fa);
+      mm.fillStyle='#4fc3ff';
+      mm.beginPath(); mm.moveTo(0,-8); mm.lineTo(5,6); mm.lineTo(-5,6); mm.closePath(); mm.fill();
+      mm.restore();
+      // objetos ao redor (vista de cima: x horizontal, z vertical)
+      for(const obj of active.values()){
+        if(!obj) continue;
+        const wp=obj.userData.worldPos;
+        const dx=wp.x-camPos.x, dz=wp.z-camPos.z;
+        const dh=Math.hypot(dx,dz);
+        if(dh>MM_RANGE) continue;
+        const mx=R + (dx/MM_RANGE)*(R-6);
+        const my=R + (dz/MM_RANGE)*(R-6);
+        mm.fillStyle = KIND_COLOR[obj.userData.kind] || '#ffffff';
+        const big = (obj.userData.radius||100) > 250;
+        mm.beginPath(); mm.arc(mx,my, big?3:2, 0,7); mm.fill();
+      }
+    }
+
+    function animate(){
+      requestAnimationFrame(animate);
+      const t=clock.elapsedTime, dt=clock.getDelta();
+      if(paused){ composer.render(); return; }   // overlay aberto: não navega
+
+      // --- ACELERADOR DA NAVE: throttle (0..1) controla a velocidade. ---
+      // W/S e scroll também mexem no acelerador (sobem/descem o throttle).
+      if(keys['w']||keys['arrowup'])   throttle += 0.008;
+      if(keys['s']||keys['arrowdown']) throttle -= 0.012;
+      if(keys[' ']) throttle = 0;                    // espaço = parada total
+      throttle = Math.max(0, Math.min(1, throttle));
+      slider.value = Math.round(throttle*100);       // sincroniza o slider visual
+
+      // curva exponencial: começa lento e suave, no fim vira "foguete"
+      const turbo = keys['shift'] ? 2.2 : 1.0;
+      targetSpeed = Math.pow(throttle, 3) * MAX_SPEED * turbo;
+
+      // ===== PILOTO AUTOMÁTICO: gira a nave pro alvo e voa até chegar =====
+      if(autoTarget){
+        const tp = autoTarget.userData.worldPos;
+        const toTarget = new THREE.Vector3(tp.x-camPos.x, tp.y-camPos.y, tp.z-camPos.z);
+        const dist = toTarget.length();
+        const rad = autoTarget.userData.radius||200;
+        if(dist < rad*1.2 || keys['s']){              // chegou (ou cancelou com S)
+          autoTarget = null; targetSpeed = 0;
+        } else {
+          // gira suavemente a câmera pra apontar ao alvo
+          const targetQuat = new THREE.Quaternion();
+          const m = new THREE.Matrix4().lookAt(new THREE.Vector3(0,0,0), toTarget.clone().negate(), new THREE.Vector3(0,1,0));
+          targetQuat.setFromRotationMatrix(m);
+          camQuat.slerp(targetQuat, 0.06);            // rotação suave até o alvo
+          camQuat.normalize();
+          // velocidade proporcional à distância (freia ao chegar)
+          targetSpeed = Math.min(MAX_SPEED, Math.max(120, dist*0.5));
+        }
+      }
+
+      // VELOCIDADE ADAPTATIVA suave: desacelera ao chegar perto, mas NUNCA
+      // trava — sempre dá pra continuar e atravessar o objeto. Mínimo alto o
+      // bastante pra você entrar de fato na nebulosa.
+      // PAUSAR PERTO: ao chegar perto de um objeto, desacelera bastante pra
+      // a ficha ficar estável e dar tempo de ler. Continua possível avançar.
+      // ===== VELOCIDADE PROPORCIONAL À ESCALA ("efeito pirâmide") =====
+      // Longe = foguete (cruza o vazio). Perto de algo gigante, a velocidade
+      // vira "escala do seu corpo": você se move devagar e preciso, como uma
+      // pessoa caminhando ao pé da pirâmide. O objeto continua imenso.
+      if(proxNear){
+        const rad = proxNear.userData.radius || 200;
+        // distância do CENTRO em "raios do objeto" (1 = na borda, 0 = no centro)
+        const dRel = (proxDist + rad) / rad;          // proxDist é da borda
+        if(dRel < 4){                                  // dentro de 4 raios: escala local
+          // velocidade-teto proporcional ao tamanho do objeto e à proximidade.
+          // perto e pequeno = devagar; longe e grande = mais rápido.
+          const localCap = rad * Math.max(0.04, dRel*0.18);
+          targetSpeed = Math.min(targetSpeed, localCap);
+        }
+      }
+
+      speed += (targetSpeed - speed) * 0.06;         // aceleração/frenagem gradual
+      distTotal += speed * dt;                        // acumula distância percorrida
+
+      // --- rotação com inércia: a câmera continua girando e desacelera ---
+      const q = new THREE.Quaternion();
+      q.setFromEuler(new THREE.Euler(pitchVel, yawVel, 0, 'XYZ'));
+      camQuat.multiply(q);                            // gira no referencial LOCAL (sem gimbal lock)
+      camQuat.normalize();
+      yawVel   *= 0.90;                               // atrito da rotação (inércia)
+      pitchVel *= 0.90;
+
+      // avança na direção que está olhando (camPos = posição LÓGICA no universo)
+      const fwd = new THREE.Vector3(0,0,-1).applyQuaternion(camQuat);
+      camPos.addScaledVector(fwd, speed);
+
+      // FLOATING ORIGIN: a câmera fica SEMPRE em (0,0,0); o universo é
+      // deslocado por -camPos. Mantém a precisão por mais longe que se viaje.
+      camera.position.set(0,0,0);
+      camera.quaternion.copy(camQuat);
+
+      // zoom suave (FOV) vindo da pinça / +- / trackpad
+      fov += (targetFov - fov) * 0.12;
+      camera.fov = fov; camera.updateProjectionMatrix();
+
+      // céus ficam na origem (estrelas distantes infinitas ao redor)
+      skyNear.position.set(0,0,0); skyMid.position.set(0,0,0); skyFar.position.set(0,0,0);
+      starMat.uniforms.uTime.value=t;
+      // WARP: intensidade cresce com a velocidade (só forte em alta velocidade)
+      starMat.uniforms.uWarp.value = Math.min(1, Math.max(0, (speed-300)/1500));
+      starMarkerMat.uniforms.uTime.value=t;   // cintilação das estrelas-marcador
+
+      // gera/descarta o universo conforme você voa
+      updateChunks();
+
+      // posiciona os MARCADORES (pontos de luz vistos de longe)
+      for(const mk of markers){
+        const wp=mk.userData.worldPos;
+        mk.position.set(wp.x-camPos.x, wp.y-camPos.y, wp.z-camPos.z);
+      }
+
+      // anima cada objeto + aplica o deslocamento de floating origin
+      const REVEAL = 6500;   // revela de mais longe (objetos ficam a ~4600)
+      let visibleCount=0, nearObj=null, nearDist=Infinity;
+      for(const obj of active.values()){
+        if(!obj) continue;
+        visibleCount++;
+        const wp = obj.userData.worldPos;
+        obj.position.set(wp.x-camPos.x, wp.y-camPos.y, wp.z-camPos.z);
+        // distância da borda do objeto (negativa = você está DENTRO dele)
+        const d = obj.position.length() - (obj.userData.radius||0);
+        if(d < nearDist){ nearDist=d; nearObj=obj; }
+
+        // REVELAÇÃO: longe = só o marcador (ponto); perto = objeto 3D cresce,
+        // marcador some. Transição suave por escala.
+        const mk = obj.userData.marker;
+        if(mk){
+          const dCenter = obj.position.length();
+          if(dCenter < REVEAL){
+            obj.visible = true;
+            const k = 1 - dCenter/REVEAL;          // 0 (longe) -> 1 (perto)
+            const s = Math.min(1, k*1.3);          // escala do objeto 3D
+            obj.scale.setScalar(s*s);              // cresce suave
+            mk.visible = dCenter > REVEAL*0.7;     // marcador some ao chegar perto
+          } else {
+            obj.visible = false;                   // longe: só o ponto de luz
+            mk.visible = true;
+          }
+        }
+
+        if(!obj.visible) continue;                 // não anima o que está oculto
+        if(obj.userData.galaxy) obj.rotation.y += dt*0.05;
+        if(obj.userData.accretion) obj.userData.accretion.rotation.y += dt*0.4; // disco do buraco negro gira rápido
+        if(obj.userData.spin){ obj.userData.mat.uniforms.uCam.value.set(0,0,0); // câmera está na origem
+                               obj.userData.mat.uniforms.uTime.value=t; }
+        if(obj.userData.planets) for(const p of obj.userData.planets){
+          p.userData.ang+=dt*p.userData.spd;
+          p.position.set(Math.cos(p.userData.ang)*p.userData.dist,0,Math.sin(p.userData.ang)*p.userData.dist);
+          p.rotation.y += dt*(p.userData.rot||0.3);   // planeta gira sobre o próprio eixo
+        }
+      }
+
+      proxDist = nearDist; proxNear = nearObj;  // alimenta a escala do próximo quadro
+      lastNearObj = nearObj; // alvo do piloto automático (botão Viajar / tecla G)
+      drawMinimap();         // atualiza o radar de canto
+
+      // ---------- FOTO REAL DA NASA: quando você se aproxima de um objeto ----------
+      // catalogado e conhecido (a ~3000 unidades), busca a imagem verdadeira.
+      maybeShowNasa(nearObj, nearDist);
+
+      // ---------- ATUALIZA O PAINEL DA NAVE (estatísticas) ----------
+      updateHUD(speed, throttle, distTotal, camPos, fov, visibleCount, nearObj, nearDist);
+
+      composer.render();   // renderiza COM o bloom
+    }
+    animate();
+
+    addEventListener('resize',()=>{
+      camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth,innerHeight);
+      composer.setSize(innerWidth,innerHeight);
+      bloom.setSize(innerWidth,innerHeight);
+    });
+  </script>
+</body>
+</html>

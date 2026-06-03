@@ -1,0 +1,20 @@
+# Dependências
+node_modules/
+
+# Vercel
+.vercel
+.vercel/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# Variáveis de ambiente (NUNCA subir chaves!)
+.env
+.env.local
+.env*.local
