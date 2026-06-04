@@ -211,10 +211,40 @@
     /* entrada suave dos cards (fade + slide), estilo React Bits */
     @keyframes risein { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform:none; } }
     #iss { animation: risein .6s ease both .3s; }
+
+    /* ---------- INDICADOR DE VIAGEM (piloto automático) ---------- */
+    #travel {
+      position: fixed; top: 22px; left: 50%; transform: translateX(-50%) translateY(-12px);
+      z-index: 14; width: min(380px, 88vw); opacity: 0; pointer-events: none;
+      transition: opacity .35s, transform .35s;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: rgba(8,12,20,0.78); border:1px solid rgba(120,200,255,0.22);
+      border-radius: 14px; padding: 12px 16px; backdrop-filter: blur(16px);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+    #travel.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #travel .trow { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+    #travel .dest { font-size:13px; color:#eaf2ff; font-weight:600; letter-spacing:.2px; }
+    #travel .dest small { color:rgba(150,190,240,0.6); font-weight:400; margin-left:6px; }
+    #travel .eta { font-size:12px; color:#9fd4ff; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    #travel .bar { margin-top:9px; height:4px; border-radius:3px; background:rgba(255,255,255,0.08); overflow:hidden; }
+    #travel .fill { height:100%; width:0%; border-radius:3px;
+      background:linear-gradient(90deg,#5a9aea,#9fd4ff); transition:width .2s ease; }
+    #travel .cancel { font-size:10px; color:rgba(170,200,235,0.5); margin-top:7px; text-align:center; }
   </style>
 </head>
 <body>
   <div id="loading">carregando o cosmos…</div>
+
+  <!-- Indicador de viagem do piloto automático (tempo/distância restante) -->
+  <div id="travel">
+    <div class="trow">
+      <span class="dest" id="travel-dest">Viajando…</span>
+      <span class="eta" id="travel-eta">—</span>
+    </div>
+    <div class="bar"><div class="fill" id="travel-fill"></div></div>
+    <div class="cancel">pressione <b>S</b> para cancelar</div>
+  </div>
 
   <!-- Dica de controles (aparece no início e some) -->
   <div id="hint">
@@ -789,6 +819,7 @@
     // ===================================================================
     const CELL = 6000;         // células GIGANTES: muito vazio entre objetos (escala real)
     const VIEW = 3;            // alcance de visão (3 = 7x7x7 células de 6000 = vê MUITO longe)
+    const REVEAL = 6500;       // a partir daqui o objeto 3D aparece e cresce (antes: só ponto)
     const active = new Map();  // "x,y,z" -> objeto Three.js (ou null se vazia)
 
     const palettes = [
@@ -1269,6 +1300,7 @@
     // Resolve o "nunca chego em nada": você não precisa mirar perfeito.
     // ===================================================================
     let autoTarget = null;          // objeto-alvo do piloto automático
+    let autoTraveling = false;      // está viajando agora? (controla o HUD "chegando")
     // CICLAR ALVOS COM G: a cada toque, vai ao PRÓXIMO objeto na ordem de
     // distância (mais próximo → seguinte → seguinte...). Reinicia ao redor.
     function gotoNearest(){
@@ -1286,13 +1318,57 @@
       let idx = autoTarget ? list.findIndex(e=>e.obj===autoTarget) : -1;
       const next = list[(idx+1) % list.length];
       autoTarget = next.obj;
+      autoStartDist = next.d;       // distância inicial (p/ a barra de progresso)
       throttle = 0;                 // o piloto controla a velocidade sozinho
       observing = false;            // sai do modo travado pra poder viajar
+      ensureAudio();                // 1º G "destrava" o áudio (política do navegador)
     }
     addEventListener('keydown', e=>{ if(e.key.toLowerCase()==='g') gotoNearest(); });
     document.getElementById('goto-btn').addEventListener('click', gotoNearest);
     let lastNearObj = null;         // atualizado no loop (objeto mais próximo)
+    let autoStartDist = 1;          // distância no início da viagem (p/ % do progresso)
     const gotoBtn = document.getElementById('goto-btn');
+
+    // ===================================================================
+    // SOM DE CHEGADA + INDICADOR DE VIAGEM
+    // Som gerado por Web Audio (sem arquivo): um acorde curto e agradável.
+    // O navegador só deixa tocar áudio após um gesto do usuário — por isso
+    // "destravamos" o contexto no primeiro G.
+    // ===================================================================
+    let audioCtx = null;
+    function ensureAudio(){
+      if(!audioCtx){
+        try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+        catch(e){ audioCtx = null; }
+      }
+      if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }
+    function playArrival(){
+      if(!audioCtx) return;
+      const now = audioCtx.currentTime;
+      // acorde ascendente (dó–mi–sol–dó), suave, ~1s — sensação de "cheguei!"
+      const notes = [523.25, 659.25, 783.99, 1046.5];
+      notes.forEach((f,i)=>{
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        const t0 = now + i*0.09;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.18, t0+0.03);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0+0.9);
+        o.connect(g).connect(audioCtx.destination);
+        o.start(t0); o.stop(t0+0.95);
+      });
+    }
+    const travelEl = {
+      box:document.getElementById('travel'), dest:document.getElementById('travel-dest'),
+      eta:document.getElementById('travel-eta'), fill:document.getElementById('travel-fill'),
+    };
+    // chamada quando o piloto chega ao alvo: esconde o indicador e toca o som.
+    function arrived(target, cancelled){
+      autoTraveling = false;
+      travelEl.box.classList.remove('show');
+      if(!cancelled) playArrival();
+    }
 
     // ===================================================================
     // MINIMAPA (radar): vista de cima mostrando objetos ao redor + sua
@@ -1485,8 +1561,12 @@
         const toTarget = new THREE.Vector3(tp.x-camPos.x, tp.y-camPos.y, tp.z-camPos.z);
         const dist = toTarget.length();
         const rad = autoTarget.userData.radius||200;
-        if(dist < rad*1.5 || keys['s']){              // chegou (ou cancelou com S)
-          autoTarget = null; targetSpeed = 0;
+        // PONTO DE PARADA: paramos FORA do objeto, a ~2.5 raios do centro, onde
+        // dá pra ver o corpo inteiro enquadrado — não enfiados dentro dele.
+        const stopDist = Math.max(rad*2.5, rad+400);
+        if(dist < stopDist || keys['s']){             // chegou (ou cancelou com S)
+          arrived(autoTarget, keys['s']);             // toca som + esconde o "chegando"
+          autoTarget = null; targetSpeed = 0; speed = 0;
         } else {
           // gira a câmera pra apontar ao alvo — rápido quando ainda desalinhado,
           // pra não desperdiçar tempo voando torto. Acelera ao mirar certo.
@@ -1497,15 +1577,44 @@
           camQuat.slerp(targetQuat, aim>0.5 ? 0.18 : 0.1);
           camQuat.normalize();
           yawVel = pitchVel = 0;                       // o piloto manda na câmera
-          // VELOCIDADE DE VIAGEM: sem teto baixo — cruza o vazio em segundos.
-          // Proporcional à distância (até 8% por quadro), com turbo de ~3×.
-          // Só voa rápido quando já está mirando o alvo (evita curva no escuro).
+
+          // VELOCIDADE DE VIAGEM com frenagem em DUAS FASES, pra você VER o
+          // objeto aparecer (antes ele cruzava a zona de revelação num piscar):
+          //  • longe (vazio): rápido, proporcional à distância.
+          //  • ao entrar na zona de revelação (REVEAL): freia forte e segue
+          //    devagar até o ponto de parada, dando tempo de ver o corpo crescer.
           const cruise = dist * 0.08;
           targetSpeed = aim>0.6 ? Math.min(cruise, 400) : cruise;
-          // ao se aproximar (< 6 raios) entra devagar pra você ver de perto
-          if(dist < rad*6) targetSpeed = Math.min(targetSpeed, Math.max(80, dist*0.25));
+          if(dist < REVEAL){
+            // distância ainda a percorrer até parar (0 na parada, 1 no início da revelação)
+            const k = Math.max(0, (dist - stopDist) / Math.max(1, REVEAL - stopDist));
+            // velocidade-teto que cresce com k: bem lenta perto, moderada na borda
+            // da revelação. Piso garante que sempre completa (sem Zenão).
+            const approach = Math.max(rad*0.05, 25) + k*k*220;
+            targetSpeed = Math.min(targetSpeed, approach);
+          }
+          autoTraveling = true;                        // sinaliza p/ o HUD de "chegando"
+
+          // ----- INDICADOR DE VIAGEM: nome, distância e tempo restante -----
+          const r = autoTarget.userData.real;
+          const nome = r ? r.n : (autoTarget.userData.kind || 'Objeto');
+          const remain = Math.max(0, dist - stopDist); // distância até "chegar"
+          // ETA: distância restante ÷ velocidade atual (em unidades/seg).
+          // speed é por quadro; ×60 ≈ por segundo. Evita divisão por ~0.
+          const perSec = Math.max(speed*60, 1);
+          const eta = remain / perSec;                  // segundos estimados
+          const etaTxt = eta>90 ? Math.round(eta/60)+' min'
+                       : eta>1.5 ? Math.round(eta)+' s'
+                       : 'chegando…';
+          travelEl.dest.innerHTML = '🚀 '+nome+' <small>'+big(remain)+' al</small>';
+          travelEl.eta.textContent = etaTxt;
+          const prog = Math.max(0, Math.min(100, (1 - remain/Math.max(autoStartDist,1))*100));
+          travelEl.fill.style.width = prog.toFixed(1)+'%';
+          travelEl.box.classList.add('show');
         }
       }
+      // se não está mais viajando, garante o indicador escondido
+      if(!autoTarget && autoTraveling){ autoTraveling=false; travelEl.box.classList.remove('show'); }
 
       // VELOCIDADE ADAPTATIVA suave: desacelera ao chegar perto, mas NUNCA
       // trava — sempre dá pra continuar e atravessar o objeto. Mínimo alto o
@@ -1519,7 +1628,10 @@
       // Não estrangula o piloto automático no meio do caminho: o efeito
       // pirâmide só vale na navegação manual (ou quando o objeto perto JÁ é o
       // alvo do piloto). Senão, um objeto qualquer no caminho te prenderia.
-      if(proxNear && (!autoTarget || proxNear===autoTarget)){
+      // Só na navegação MANUAL. Durante o piloto automático, o piso de
+      // velocidade da aproximação já cuida da escala — não estrangulamos aqui
+      // (senão a chegada vira assintótica e nunca completa).
+      if(proxNear && !autoTarget){
         const rad = proxNear.userData.radius || 200;
         // distância do CENTRO em "raios do objeto" (1 = na borda, 0 = no centro)
         const dRel = (proxDist + rad) / rad;          // proxDist é da borda
@@ -1614,7 +1726,6 @@
       }
 
       // anima cada objeto + aplica o deslocamento de floating origin
-      const REVEAL = 6500;   // revela de mais longe (objetos ficam a ~4600)
       let visibleCount=0, nearObj=null, nearDist=Infinity;
       for(const obj of active.values()){
         if(!obj) continue;
@@ -1632,10 +1743,13 @@
           const dCenter = obj.position.length();
           if(dCenter < REVEAL){
             obj.visible = true;
+            // cresce suave de 0 (na borda da revelação) a 1 (tamanho cheio).
+            // Chega ao tamanho cheio JÁ na metade da zona, pra você ver o
+            // objeto grande bem antes de parar (e não "estourando" na sua cara).
             const k = 1 - dCenter/REVEAL;          // 0 (longe) -> 1 (perto)
-            const s = Math.min(1, k*1.3);          // escala do objeto 3D
-            obj.scale.setScalar(s*s);              // cresce suave
-            mk.visible = dCenter > REVEAL*0.7;     // marcador some ao chegar perto
+            const s = Math.min(1, k*2.2);          // atinge cheio na ~metade do caminho
+            obj.scale.setScalar(s*s);              // cresce suave (ease-in)
+            mk.visible = dCenter > REVEAL*0.55;    // marcador some ao chegar perto
           } else {
             obj.visible = false;                   // longe: só o ponto de luz
             mk.visible = true;
