@@ -6,11 +6,31 @@
 // Uso pelo front-end:
 //   /api/nasa?type=apod                  -> imagem astronômica do dia
 //   /api/nasa?type=search&q=orion+nebula -> busca imagens reais (Hubble/JWST)
+//   /api/nasa?type=iss                   -> posição da ISS em TEMPO REAL
+//   /api/nasa?type=astros                -> astronautas a bordo agora
 // ===================================================================
 
 export default async function handler(req, res) {
   const KEY = process.env.NASA_API_KEY || 'DEMO_KEY';
   const { type = 'apod', q = '' } = req.query;
+
+  // TEMPO REAL (ISS): estes dados mudam a cada segundo — NÃO podem ser
+  // cacheados. Tratamos antes do cache padrão e retornamos cedo.
+  if (type === 'iss' || type === 'astros') {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+      // wheretheiss.at: lat/lon/altitude/velocidade da ISS (sem chave).
+      // open-notify: quem está no espaço agora.
+      const src = type === 'iss'
+        ? 'https://api.wheretheiss.at/v1/satellites/25544'   // 25544 = NORAD da ISS
+        : 'http://api.open-notify.org/astros.json';
+      const r = await fetch(src);
+      if (!r.ok) return res.status(r.status).json({ error: 'falha ao consultar a ISS' });
+      return res.status(200).json(await r.json());
+    } catch (e) {
+      return res.status(500).json({ error: String(e) });
+    }
+  }
 
   // cache de borda: a NASA não muda a cada segundo; aliviamos a API e
   // ganhamos velocidade. (1h no cliente, 1 dia na borda da Vercel)

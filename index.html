@@ -66,6 +66,41 @@
     #nasa .meta .frow b { color:#eaf2ff; font-weight:500; }
     #nasa .src { color:rgba(160,185,220,0.4); font-size:10px; margin-top:10px; letter-spacing:.3px; }
     @media (max-width:560px){ #nasa{ width:180px; } #nasa img{height:110px;} }
+    /* ---------- CARD DA ISS AO VIVO (canto inferior esquerdo) ---------- */
+    #iss {
+      position: fixed; left: 16px; bottom: 56px; z-index: 11; width: 250px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: rgba(8,12,20,0.72); border:1px solid rgba(120,200,255,0.18);
+      border-radius: 16px; overflow: hidden; backdrop-filter: blur(16px);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+    #iss .iss-head {
+      display:flex; align-items:center; gap:8px; padding:11px 14px;
+      font-size:13px; color:#eaf2ff; border-bottom:1px solid rgba(255,255,255,0.06);
+    }
+    #iss .iss-head b { font-weight:600; flex:1; letter-spacing:.2px; }
+    #iss .iss-head .dot {
+      width:8px; height:8px; border-radius:50%; background:#5cff9d;
+      box-shadow:0 0 8px #5cff9d; animation: issblink 1.6s infinite;
+    }
+    @keyframes issblink { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+    #iss .iss-head button {
+      background:none; border:0; color:rgba(180,205,235,0.6); font-size:18px;
+      line-height:1; cursor:pointer; padding:0 4px;
+    }
+    #iss .iss-head button:hover { color:#fff; }
+    #iss-body { padding:12px 14px 14px; }
+    #iss.min #iss-body { display:none; }
+    #iss-globe { width:100%; height:auto; display:block; margin-bottom:10px; }
+    #iss .iss-stats { font-size:12px; }
+    #iss .frow { display:flex; justify-content:space-between; gap:12px; padding:4px 0;
+      border-bottom:1px solid rgba(255,255,255,0.05); }
+    #iss .frow:last-child { border-bottom:0; }
+    #iss .frow span { color:rgba(200,215,235,0.5); }
+    #iss .frow b { color:#eaf2ff; font-weight:500; }
+    #iss-names { font-size:10.5px; color:rgba(170,200,235,0.6); margin-top:7px; line-height:1.5; }
+    #iss .iss-src { color:rgba(160,185,220,0.4); font-size:9.5px; margin-top:9px; letter-spacing:.3px; }
+    @media (max-width:560px){ #iss{ width:170px; bottom:50px; } #iss-globe{display:none;} }
     /* ---------- BOTÃO EXPLORAR (canto superior esquerdo) ---------- */
     #explore-btn {
       position: fixed; top: 18px; left: 18px; z-index: 12;
@@ -133,6 +168,49 @@
     #hint b { color:#fff; } #hint .k {
       display:inline-block; background:rgba(255,255,255,0.12); border-radius:5px;
       padding:1px 7px; font-family:ui-monospace,monospace; font-size:12px; margin:0 1px; }
+
+    /* ================================================================
+       EFEITOS estilo REACT BITS (em CSS/JS puro — sem build)
+       Glow, shine de texto, borda gradiente animada e entradas suaves.
+       ================================================================ */
+    /* título COSMOS com brilho que "varre" (shine) */
+    #hint .cosmos-title {
+      font-size: 30px; font-weight: 800; letter-spacing: 6px; margin-bottom: 14px;
+      background: linear-gradient(100deg,#7fb8ff 0%,#ffffff 30%,#c9a0ff 55%,#ffffff 75%,#7fb8ff 100%);
+      background-size: 250% auto; -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      animation: shine 4.5s linear infinite;
+      filter: drop-shadow(0 0 18px rgba(130,170,255,0.35));
+    }
+    @keyframes shine { to { background-position: 250% center; } }
+
+    /* borda gradiente VIVA girando ao redor dos cards (ISS e NASA) */
+    #iss::before, #nasa::before {
+      content:''; position:absolute; inset:-1px; border-radius:16px; padding:1px;
+      background: conic-gradient(from var(--ang,0deg),
+        rgba(120,200,255,0.0) 0deg, rgba(120,200,255,0.55) 60deg,
+        rgba(180,140,255,0.0) 140deg, rgba(120,200,255,0.0) 360deg);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      pointer-events:none; opacity:0.0; transition:opacity .4s; z-index:1;
+    }
+    #iss::before { animation: spinang 6s linear infinite; opacity:0.9; }
+    #nasa.show::before { opacity:0.9; }
+    @property --ang { syntax:'<angle>'; initial-value:0deg; inherits:false; }
+    @keyframes spinang { to { --ang:360deg; } }
+    /* fallback p/ navegadores sem @property: pulso suave de opacidade */
+    @supports not (background: conic-gradient(from 1deg, #000, #000)) {
+      #iss::before, #nasa::before { background: rgba(120,200,255,0.3); animation: pulseb 3s infinite; }
+      @keyframes pulseb { 0%,100%{opacity:0.3;} 50%{opacity:0.7;} }
+    }
+
+    /* número que "conta" — leve realce ao atualizar (count-up dá o resto via JS) */
+    .countup { font-variant-numeric: tabular-nums; transition: color .25s; }
+    .countup.bump { color:#aee0ff; }
+
+    /* entrada suave dos cards (fade + slide), estilo React Bits */
+    @keyframes risein { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform:none; } }
+    #iss { animation: risein .6s ease both .3s; }
   </style>
 </head>
 <body>
@@ -140,9 +218,9 @@
 
   <!-- Dica de controles (aparece no início e some) -->
   <div id="hint">
-    <div style="font-size:16px;margin-bottom:10px"><b>Bem-vindo ao Cosmos</b></div>
-    <span class="k">W</span> acelerar · <span class="k">S</span> frear · <span class="k">Espaço</span> parar<br>
-    Arraste para olhar · <span class="k">G</span> viajar até o objeto perto<br>
+    <div class="cosmos-title">COSMOS</div>
+    <span class="k">W</span> acelerar · <span class="k">S</span> frear · <span class="k">Espaço</span> travar e observar<br>
+    Arraste para olhar · <span class="k">G</span> próximo objeto (toque de novo p/ o seguinte)<br>
     <span style="opacity:0.6">Vá devagar para contemplar — acelere para cruzar o vazio</span>
   </div>
 
@@ -164,10 +242,31 @@
         <button data-src="https://eyes.nasa.gov/apps/solar-system/#/home" class="active">☉ Sistema Solar</button>
         <button data-src="https://eyes.nasa.gov/apps/asteroids/#/home">☄ Asteroides</button>
         <button data-src="https://eyes.nasa.gov/apps/earth/">🌍 Terra</button>
+        <button data-src="https://eyes.nasa.gov/apps/solar-system/#/sc_international_space_station">🛰 ISS</button>
       </div>
       <button id="overlay-close">✕ Voltar ao cosmos</button>
     </div>
     <iframe id="overlay-frame" src="" allow="fullscreen" referrerpolicy="no-referrer"></iframe>
+  </div>
+
+  <!-- Card da ISS AO VIVO: globo da Terra + posição real em tempo real -->
+  <div id="iss">
+    <div class="iss-head">
+      <span class="dot"></span><b>ISS · ao vivo</b>
+      <button id="iss-min" title="recolher">–</button>
+    </div>
+    <div id="iss-body">
+      <canvas id="iss-globe" width="220" height="220"></canvas>
+      <div class="iss-stats">
+        <div class="frow"><span>Latitude</span><b id="iss-lat">—</b></div>
+        <div class="frow"><span>Longitude</span><b id="iss-lon">—</b></div>
+        <div class="frow"><span>Altitude</span><b id="iss-alt">—</b></div>
+        <div class="frow"><span>Velocidade</span><b id="iss-vel">—</b></div>
+        <div class="frow"><span>A bordo</span><b id="iss-crew">—</b></div>
+      </div>
+      <div id="iss-names"></div>
+      <div class="iss-src">🛰 wheretheiss.at · open-notify</div>
+    </div>
   </div>
 
   <!-- Card com a FOTO REAL da NASA do objeto que você encontrou -->
@@ -185,6 +284,7 @@
   <div id="hud">
     <div class="item"><span class="lbl">Velocidade</span><span class="val" id="h-speed">0</span></div>
     <div class="item"><span class="lbl">Distância</span><span class="val" id="h-dist">0 al</span></div>
+    <div class="item"><span class="lbl">Tempo a bordo</span><span class="val" id="h-time">×1.00</span></div>
     <div class="item grow"><span class="lbl">Objeto próximo</span><span class="val near" id="h-near">—</span></div>
     <!-- ocultos (ainda usados pelo código) -->
     <span id="h-throt" hidden></span><span id="h-x" hidden></span>
@@ -349,6 +449,73 @@
     const skyMid =makeStarfield(5000, 22000, 18);
     const skyFar =makeStarfield(6000, 50000, 26);
     scene.add(skyNear, skyMid, skyFar);
+
+    // ===================================================================
+    // CAMPO DE WARP (estrelas que PASSAM VOANDO) — resolve o "só dá pra ver
+    // o escuro quando ando rápido". As camadas de céu acompanham a câmera e
+    // ficam paradas; estas aqui são estrelas PRÓXIMAS numa caixa ao seu redor
+    // que se deslocam CONTRA o movimento da nave. Em alta velocidade viram
+    // riscos de luz alongados na direção em que você voa (aberração da luz).
+    // ===================================================================
+    const WARP_N = 1400;            // densidade do campo próximo
+    const WARP_BOX = 2600;          // meia-aresta da caixa ao redor da câmera
+    const warpMat = new THREE.ShaderMaterial({
+      uniforms:{ uWarp:{value:0}, uDir:{value:new THREE.Vector3(0,0,-1)}, uLen:{value:0} },
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+      vertexShader:`
+        attribute float aSize; attribute vec3 aColor;
+        uniform float uWarp, uLen; uniform vec3 uDir;
+        varying vec3 vColor; varying float vStretch; varying vec2 vAxis;
+        void main(){
+          vec4 mv = modelViewMatrix*vec4(position,1.0);
+          // Doppler: à frente (na direção do voo) azula; o resto mantém cor.
+          float ahead = clamp(dot(normalize(-mv.xyz), uDir), -1.0, 1.0);
+          vColor = mix(aColor, aColor*vec3(0.55,0.8,1.7), max(0.0,ahead)*uWarp);
+          // ESTICA o ponto formando um RISCO: projeta a direção de voo na tela
+          // pra alinhar o streak com o movimento (aberração relativística).
+          vec4 tipView = modelViewMatrix*vec4(position - uDir*uLen, 1.0);
+          vec4 a = projectionMatrix*mv;
+          vec4 b = projectionMatrix*tipView;
+          vec2 axis = (b.xy/b.w) - (a.xy/a.w);
+          vAxis = length(axis)>0.0001 ? normalize(axis) : vec2(1.0,0.0);
+          vStretch = uWarp;
+          gl_PointSize = aSize*(420.0/-mv.z)*(1.0+uWarp*6.0);
+          gl_Position = a;
+        }`,
+      fragmentShader:`
+        precision highp float;
+        varying vec3 vColor; varying float vStretch; varying vec2 vAxis;
+        void main(){
+          vec2 uv = gl_PointCoord-0.5;
+          // gira o quadrado pro eixo do streak e comprime no transversal:
+          // vira um RISCO de luz na direção do movimento.
+          vec2 r = vec2(dot(uv,vAxis), dot(uv,vec2(-vAxis.y,vAxis.x)));
+          r.y /= max(0.06, 1.0 - vStretch*0.94);     // achata = risco fino
+          float d = length(r);
+          float core = smoothstep(0.5,0.0,d);
+          float a = core*core;
+          if(a<0.01) discard;
+          gl_FragColor = vec4(vColor*(0.7+core), a);
+        }`,
+    });
+    const warpField = (function(){
+      const g=new THREE.BufferGeometry();
+      const pos=new Float32Array(WARP_N*3), sz=new Float32Array(WARP_N), col=new Float32Array(WARP_N*3);
+      const pal=[[0.75,0.85,1.0],[0.9,0.95,1.0],[1,1,1],[1,0.95,0.85],[1,0.85,0.7]];
+      for(let i=0;i<WARP_N;i++){
+        pos[i*3]  =(Math.random()-0.5)*2*WARP_BOX;
+        pos[i*3+1]=(Math.random()-0.5)*2*WARP_BOX;
+        pos[i*3+2]=(Math.random()-0.5)*2*WARP_BOX;
+        sz[i]=1.5+Math.random()*2.5;
+        const c=pal[Math.floor(Math.random()*pal.length)];
+        col[i*3]=c[0]; col[i*3+1]=c[1]; col[i*3+2]=c[2];
+      }
+      g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+      g.setAttribute('aSize',new THREE.BufferAttribute(sz,1));
+      g.setAttribute('aColor',new THREE.BufferAttribute(col,3));
+      const m=new THREE.Points(g, warpMat); m.frustumCulled=false; return m;
+    })();
+    scene.add(warpField);
 
     // ===================================================================
     // FÁBRICAS DE OBJETOS (cada célula do espaço gera um destes)
@@ -531,7 +698,19 @@
         }
         const p=new THREE.Mesh(new THREE.SphereGeometry(pr,24,24),
           new THREE.MeshStandardMaterial({map:planetTexture(type), roughness:0.95, metalness:0.0}));
-        p.userData={dist:radius*(0.5+i*0.35), ang:hash(i,seed,4,8)*6.28, spd:0.3/(1+i),
+        // ÓRBITA KEPLERIANA (3ª Lei de Kepler): T² ∝ a³  ⇒  ω = k·a^(-1.5).
+        // O planeta mais distante do sol orbita MAIS devagar — como no Sistema
+        // Solar real (Mercúrio voa, Netuno se arrasta). 'a' é o semieixo (dist).
+        const a = radius*(0.5+i*0.35);                    // semieixo orbital (raio da órbita)
+        // se a NASA deu o período real (orbper, em dias), usa a razão entre os
+        // períodos reais p/ preservar a 3ª lei observada; senão, deriva de a^1.5.
+        let omega;
+        if(rp && rp.orbper){
+          omega = 6.28 / (rp.orbper * 0.06);              // dias reais → rad/seg de tela
+        } else {
+          omega = 9000 * Math.pow(a, -1.5);              // k·a^(-1.5): Kepler puro
+        }
+        p.userData={dist:a, ang:hash(i,seed,4,8)*6.28, spd:omega,
                     rot:0.2+hash(i,seed,1,2)*0.6, name: rp?rp.name:null};
         group.add(p); planets.push(p);
       }
@@ -828,10 +1007,17 @@
     const camQuat=new THREE.Quaternion();              // orientação atual
     let dragging=false,lastX=0,lastY=0;
     let yawVel=0, pitchVel=0;                           // velocidade angular (inércia)
+    let observing=false;                                // modo observação (Espaço): cena travada
     let speed=0, targetSpeed=0;                         // velocidade linear suavizada
     let throttle=0;                                     // 0..1 (acelerador da nave)
     const MAX_SPEED=2200;                               // máximo bem alto: cruzar o vazio enorme
+    // VELOCIDADE DA LUZ (de tela): no HUD, speed×1.2 = "× luz". Logo c equivale
+    // a speed = 1/1.2 ≈ 0.83 nesse mapa. Mas isso é "1× luz"; deixamos a luz
+    // como referência de DILATAÇÃO no topo da faixa de velocidade: tratamos
+    // C_SCREEN como a velocidade onde v/c → 1 (no limite superior navegável).
+    const C_SCREEN = MAX_SPEED * 3.0;                   // teto de turbo = ~1× luz (γ→∞)
     let distTotal=0;                                    // distância acumulada (estatística)
+    let shipTime=0, worldTime=0;                        // relógios: a bordo vs. universo (dilatação)
     let proxDist=Infinity;                              // distância ao objeto mais próximo (freio auto)
     let proxNear=null;                                  // o objeto mais próximo (p/ escala)
 
@@ -843,6 +1029,7 @@
     addEventListener('mouseup',()=>dragging=false);
     addEventListener('mousemove',e=>{
       if(!dragging)return;
+      observing=false;                                 // arrastar pra olhar = sai do modo travado
       yawVel   += -(e.clientX-lastX)*0.00025;
       pitchVel += -(e.clientY-lastY)*0.00025;
       lastX=e.clientX; lastY=e.clientY;
@@ -916,7 +1103,7 @@
       dist:document.getElementById('h-dist'),  x:document.getElementById('h-x'),
       y:document.getElementById('h-y'),        z:document.getElementById('h-z'),
       fov:document.getElementById('h-fov'),     obj:document.getElementById('h-obj'),
-      near:document.getElementById('h-near'),
+      near:document.getElementById('h-near'),    time:document.getElementById('h-time'),
     };
     // formata número grande com sufixo (mil, mi, bi, tri)
     function big(n){
@@ -939,12 +1126,16 @@
       return mant+'×10'+sup(exp)+' al';
     }
     let hudTick=0;
-    function updateHUD(speed, throttle, dist, pos, fov, count, near, nearD){
+    function updateHUD(speed, throttle, dist, pos, fov, count, near, nearD, gamma){
       if(hudTick++ % 4) return;                  // atualiza ~15x/s (clean, alivia o DOM)
       // velocidade em "× luz" (sensação de nave), simples
       const c = speed * 1.2;
       els.speed.textContent = c<1 ? Math.round(c*1000)+' km/s' : big(c)+'× luz';
       els.dist.textContent  = big(dist)+' al';
+      // DILATAÇÃO TEMPORAL: γ é o quanto o tempo a bordo corre MAIS DEVAGAR.
+      // ×1.00 = parado/lento; cresce ao se aproximar da luz. Esverdeia no extremo.
+      els.time.textContent = '×'+(gamma<100 ? gamma.toFixed(2) : big(gamma));
+      els.time.style.color = gamma>2 ? '#7dffb0' : '#eaf4ff';
       if(near){
         const inside = nearD < 0;
         const real = near.userData.real;
@@ -1078,10 +1269,25 @@
     // Resolve o "nunca chego em nada": você não precisa mirar perfeito.
     // ===================================================================
     let autoTarget = null;          // objeto-alvo do piloto automático
+    // CICLAR ALVOS COM G: a cada toque, vai ao PRÓXIMO objeto na ordem de
+    // distância (mais próximo → seguinte → seguinte...). Reinicia ao redor.
     function gotoNearest(){
-      if(!lastNearObj) return;
-      autoTarget = lastNearObj;
+      // lista de objetos reais (não os pontinhos-estrela), ordenada por distância
+      const list = [];
+      for(const obj of active.values()){
+        if(!obj || obj.userData.isStarPoint) continue;
+        const wp = obj.userData.worldPos;
+        const d = Math.hypot(wp.x-camPos.x, wp.y-camPos.y, wp.z-camPos.z);
+        list.push({obj, d});
+      }
+      if(!list.length) return;
+      list.sort((a,b)=>a.d-b.d);
+      // índice do alvo atual na lista; o próximo é o seguinte (cicla no fim)
+      let idx = autoTarget ? list.findIndex(e=>e.obj===autoTarget) : -1;
+      const next = list[(idx+1) % list.length];
+      autoTarget = next.obj;
       throttle = 0;                 // o piloto controla a velocidade sozinho
+      observing = false;            // sai do modo travado pra poder viajar
     }
     addEventListener('keydown', e=>{ if(e.key.toLowerCase()==='g') gotoNearest(); });
     document.getElementById('goto-btn').addEventListener('click', gotoNearest);
@@ -1128,6 +1334,120 @@
       }
     }
 
+    // ===================================================================
+    // ISS AO VIVO — posição REAL da Estação Espacial em tempo real.
+    // Busca a cada 5s (wheretheiss.at) + tripulação (open-notify), desenha
+    // a Terra num globo 2D e marca a ISS na lat/lon verdadeira agora mesmo.
+    // ===================================================================
+    const issEls = {
+      lat:document.getElementById('iss-lat'), lon:document.getElementById('iss-lon'),
+      alt:document.getElementById('iss-alt'), vel:document.getElementById('iss-vel'),
+      crew:document.getElementById('iss-crew'), names:document.getElementById('iss-names'),
+    };
+    const issCanvas = document.getElementById('iss-globe');
+    const ig = issCanvas.getContext('2d');
+    let issPos = null;        // {lat, lon} atual (alvo)
+    let issDraw = null;       // {lat, lon} interpolado (suave)
+    let issSpin = 0;          // giro lento do globo
+
+    function drawGlobe(){
+      const W=issCanvas.width, R=W/2, cx=R, cy=R, rad=R-14;
+      ig.clearRect(0,0,W,W);
+      // halo atmosférico
+      const halo=ig.createRadialGradient(cx,cy,rad*0.7,cx,cy,rad+10);
+      halo.addColorStop(0,'rgba(90,160,255,0.0)'); halo.addColorStop(1,'rgba(90,160,255,0.18)');
+      ig.fillStyle=halo; ig.beginPath(); ig.arc(cx,cy,rad+10,0,7); ig.fill();
+      // disco da Terra (oceano)
+      const oce=ig.createRadialGradient(cx-rad*0.3,cy-rad*0.3,rad*0.1,cx,cy,rad);
+      oce.addColorStop(0,'#1b4a7a'); oce.addColorStop(1,'#06223e');
+      ig.fillStyle=oce; ig.beginPath(); ig.arc(cx,cy,rad,0,7); ig.fill();
+      // grade de meridianos/paralelos (dá sensação de globo girando)
+      ig.save(); ig.beginPath(); ig.arc(cx,cy,rad,0,7); ig.clip();
+      ig.strokeStyle='rgba(120,190,255,0.18)'; ig.lineWidth=1;
+      for(let i=-3;i<=3;i++){          // paralelos
+        const y=cy+(i/3.5)*rad, w=Math.sqrt(Math.max(0,rad*rad-(y-cy)*(y-cy)));
+        ig.beginPath(); ig.moveTo(cx-w,y); ig.lineTo(cx+w,y); ig.stroke();
+      }
+      for(let i=0;i<6;i++){             // meridianos (elipses que giram)
+        const ph=issSpin+i*Math.PI/6, ew=Math.abs(Math.cos(ph))*rad;
+        ig.beginPath(); ig.ellipse(cx,cy,ew,rad,0,0,7); ig.stroke();
+      }
+      ig.restore();
+      // borda
+      ig.strokeStyle='rgba(140,200,255,0.5)'; ig.lineWidth=1.5;
+      ig.beginPath(); ig.arc(cx,cy,rad,0,7); ig.stroke();
+
+      // marca a ISS: projeta lat/lon num globo girando (só visível na face frontal)
+      if(issDraw){
+        const latR=issDraw.lat*Math.PI/180;
+        const lonR=issDraw.lon*Math.PI/180 + issSpin;   // gira junto com o globo
+        const x3=Math.cos(latR)*Math.sin(lonR);
+        const y3=Math.sin(latR);
+        const z3=Math.cos(latR)*Math.cos(lonR);          // z>0 = face visível
+        const px=cx+x3*rad, py=cy-y3*rad;
+        if(z3>=-0.05){                                    // só desenha se estiver "na frente"
+          const a=Math.max(0.25, z3);
+          // órbita (anel) + estação
+          ig.strokeStyle=`rgba(255,210,120,${0.35*a})`; ig.lineWidth=1;
+          ig.beginPath(); ig.arc(cx,cy,rad+5,0,7); ig.stroke();
+          ig.fillStyle=`rgba(255,225,150,${a})`;
+          ig.beginPath(); ig.arc(px,py,3.5,0,7); ig.fill();
+          ig.strokeStyle=`rgba(255,235,180,${a})`; ig.lineWidth=1;
+          ig.beginPath(); ig.arc(px,py,7,0,7); ig.stroke();
+          ig.font='9px system-ui'; ig.fillStyle=`rgba(255,235,190,${a})`;
+          ig.fillText('ISS', px+9, py+3);
+        }
+      }
+    }
+
+    async function fetchISS(){
+      try{
+        const r = await fetch('/api/nasa?type=iss');
+        if(!r.ok) return;
+        const d = await r.json();
+        issPos = { lat:d.latitude, lon:d.longitude };
+        if(!issDraw) issDraw = { ...issPos };
+        issEls.lat.textContent = d.latitude.toFixed(2)+'°';
+        issEls.lon.textContent = d.longitude.toFixed(2)+'°';
+        // efeito React Bits "CountUp": o número sobe animado até o valor real
+        countUp(issEls.alt, d.altitude, v=>Math.round(v)+' km');
+        countUp(issEls.vel, d.velocity, v=>Math.round(v).toLocaleString('pt-BR')+' km/h');
+      }catch(e){ /* offline / bloqueado: mantém o último valor */ }
+    }
+    // anima um número subindo do valor atual até o alvo (~0.7s, ease-out)
+    function countUp(el, target, fmt){
+      el.classList.add('countup');
+      const from = el._v ?? target, dur = 700, t0 = performance.now();
+      el.classList.add('bump');
+      function step(now){
+        const k = Math.min(1, (now-t0)/dur);
+        const e = 1-Math.pow(1-k,3);              // ease-out cúbico
+        const v = from + (target-from)*e;
+        el.textContent = fmt(v);
+        if(k<1) requestAnimationFrame(step);
+        else { el._v = target; el.classList.remove('bump'); }
+      }
+      requestAnimationFrame(step);
+    }
+    async function fetchAstros(){
+      try{
+        const r = await fetch('/api/nasa?type=astros');
+        if(!r.ok) return;
+        const d = await r.json();
+        const iss = (d.people||[]).filter(p=>p.craft==='ISS');
+        issEls.crew.textContent = (d.number||iss.length)+' pessoas';
+        issEls.names.textContent = (d.people||[]).map(p=>p.name).join(' · ');
+      }catch(e){ /* silencioso */ }
+    }
+    fetchISS(); fetchAstros();
+    setInterval(fetchISS, 5000);          // posição: a cada 5s
+    setInterval(fetchAstros, 5*60*1000);  // tripulação muda raramente
+
+    // recolher/expandir o card
+    document.getElementById('iss-min').addEventListener('click', ()=>{
+      document.getElementById('iss').classList.toggle('min');
+    });
+
     function animate(){
       requestAnimationFrame(animate);
       const t=clock.elapsedTime, dt=clock.getDelta();
@@ -1137,7 +1457,15 @@
       // W/S e scroll também mexem no acelerador (sobem/descem o throttle).
       if(keys['w']||keys['arrowup'])   throttle += 0.008;
       if(keys['s']||keys['arrowdown']) throttle -= 0.012;
-      if(keys[' ']) throttle = 0;                    // espaço = parada total
+      // ESPAÇO = TRAVAR E OBSERVAR: para a nave E congela a rotação por inércia.
+      // Entra em "modo observação" — a cena fica estável pra você contemplar.
+      // Qualquer W/S/seta ou arraste do mouse cancela e volta a navegar.
+      if(keys[' ']){
+        throttle = 0; targetSpeed = 0; speed = 0;
+        yawVel = 0; pitchVel = 0;                     // mata a deriva da câmera
+        observing = true;
+      }
+      if(keys['w']||keys['s']||keys['arrowup']||keys['arrowdown']) observing = false;
       throttle = Math.max(0, Math.min(1, throttle));
       slider.value = Math.round(throttle*100);       // sincroniza o slider visual
 
@@ -1148,21 +1476,34 @@
 
       // ===== PILOTO AUTOMÁTICO: gira a nave pro alvo e voa até chegar =====
       if(autoTarget){
+        observing = false;                            // viajando não está "observando"
+        // segurança: se o alvo foi descarregado (saiu do range), aborta limpo.
+        if(!autoTarget.userData || !autoTarget.userData.worldPos){ autoTarget=null; }
+      }
+      if(autoTarget){
         const tp = autoTarget.userData.worldPos;
         const toTarget = new THREE.Vector3(tp.x-camPos.x, tp.y-camPos.y, tp.z-camPos.z);
         const dist = toTarget.length();
         const rad = autoTarget.userData.radius||200;
-        if(dist < rad*1.2 || keys['s']){              // chegou (ou cancelou com S)
+        if(dist < rad*1.5 || keys['s']){              // chegou (ou cancelou com S)
           autoTarget = null; targetSpeed = 0;
         } else {
-          // gira suavemente a câmera pra apontar ao alvo
+          // gira a câmera pra apontar ao alvo — rápido quando ainda desalinhado,
+          // pra não desperdiçar tempo voando torto. Acelera ao mirar certo.
           const targetQuat = new THREE.Quaternion();
           const m = new THREE.Matrix4().lookAt(new THREE.Vector3(0,0,0), toTarget.clone().negate(), new THREE.Vector3(0,1,0));
           targetQuat.setFromRotationMatrix(m);
-          camQuat.slerp(targetQuat, 0.06);            // rotação suave até o alvo
+          const aim = camQuat.angleTo(targetQuat);    // quão desalinhado (rad)
+          camQuat.slerp(targetQuat, aim>0.5 ? 0.18 : 0.1);
           camQuat.normalize();
-          // velocidade proporcional à distância (freia ao chegar)
-          targetSpeed = Math.min(MAX_SPEED, Math.max(120, dist*0.5));
+          yawVel = pitchVel = 0;                       // o piloto manda na câmera
+          // VELOCIDADE DE VIAGEM: sem teto baixo — cruza o vazio em segundos.
+          // Proporcional à distância (até 8% por quadro), com turbo de ~3×.
+          // Só voa rápido quando já está mirando o alvo (evita curva no escuro).
+          const cruise = dist * 0.08;
+          targetSpeed = aim>0.6 ? Math.min(cruise, 400) : cruise;
+          // ao se aproximar (< 6 raios) entra devagar pra você ver de perto
+          if(dist < rad*6) targetSpeed = Math.min(targetSpeed, Math.max(80, dist*0.25));
         }
       }
 
@@ -1175,7 +1516,10 @@
       // Longe = foguete (cruza o vazio). Perto de algo gigante, a velocidade
       // vira "escala do seu corpo": você se move devagar e preciso, como uma
       // pessoa caminhando ao pé da pirâmide. O objeto continua imenso.
-      if(proxNear){
+      // Não estrangula o piloto automático no meio do caminho: o efeito
+      // pirâmide só vale na navegação manual (ou quando o objeto perto JÁ é o
+      // alvo do piloto). Senão, um objeto qualquer no caminho te prenderia.
+      if(proxNear && (!autoTarget || proxNear===autoTarget)){
         const rad = proxNear.userData.radius || 200;
         // distância do CENTRO em "raios do objeto" (1 = na borda, 0 = no centro)
         const dRel = (proxDist + rad) / rad;          // proxDist é da borda
@@ -1187,11 +1531,21 @@
         }
       }
 
-      // frenagem mais rápida que aceleração: solta o acelerador e PARA logo
-      const blend = (targetSpeed < speed) ? 0.12 : 0.05;
+      // frenagem mais rápida que aceleração: solta o acelerador e PARA logo.
+      // No piloto automático a aceleração é mais ágil pra cruzar o vazio rápido.
+      const accel = autoTarget ? 0.12 : 0.05;
+      const blend = (targetSpeed < speed) ? 0.12 : accel;
       speed += (targetSpeed - speed) * blend;
       if(speed < 2) speed = 0;                        // para de verdade (sem deriva)
       distTotal += speed * dt;                        // acumula distância percorrida
+
+      // ===== DILATAÇÃO TEMPORAL (relatividade restrita) =====
+      // Fator de Lorentz γ = 1/√(1 − v²/c²). Quanto mais perto da luz, mais
+      // devagar o tempo passa a BORDO em relação ao universo. dτ = dt/γ.
+      const beta = Math.min(0.99999, speed / C_SCREEN); // v/c (limitado p/ não estourar)
+      const gamma = 1 / Math.sqrt(1 - beta*beta);       // γ ≥ 1
+      worldTime += dt;                                  // tempo do universo (referencial externo)
+      shipTime  += dt / gamma;                          // tempo próprio (relógio da nave, corre menos)
 
       // --- rotação com inércia: a câmera continua girando e desacelera ---
       const q = new THREE.Quaternion();
@@ -1224,6 +1578,31 @@
       starMat.uniforms.uWarp.value = warp;
       starMarkerMat.uniforms.uWarp.value = warp;   // também nas estrelas-marcador
       starMarkerMat.uniforms.uTime.value=t;   // cintilação das estrelas-marcador
+
+      // ===== CAMPO DE WARP: estrelas que PASSAM VOANDO =====
+      // Move cada partícula CONTRA o movimento da nave e faz wrap quando sai
+      // da caixa (universo infinito barato). Em alta velocidade vira streak.
+      {
+        const wp = warpField.geometry.attributes.position;
+        const arr = wp.array;
+        // deslocamento deste quadro = quanto a nave andou, ao contrário.
+        const step = speed * 1.0;                  // estrelas próximas reagem forte
+        const dx=-fwd.x*step, dy=-fwd.y*step, dz=-fwd.z*step;
+        for(let i=0;i<arr.length;i+=3){
+          let x=arr[i]+dx, y=arr[i+1]+dy, z=arr[i+2]+dz;
+          // wrap toroidal na caixa centrada na origem (câmera)
+          if(x> WARP_BOX) x-=2*WARP_BOX; else if(x<-WARP_BOX) x+=2*WARP_BOX;
+          if(y> WARP_BOX) y-=2*WARP_BOX; else if(y<-WARP_BOX) y+=2*WARP_BOX;
+          if(z> WARP_BOX) z-=2*WARP_BOX; else if(z<-WARP_BOX) z+=2*WARP_BOX;
+          arr[i]=x; arr[i+1]=y; arr[i+2]=z;
+        }
+        wp.needsUpdate = true;
+        warpMat.uniforms.uWarp.value = warp;
+        warpMat.uniforms.uDir.value.copy(fwd);
+        // comprimento do risco cresce com a velocidade (aberração)
+        warpMat.uniforms.uLen.value = Math.min(900, speed*0.9) * warp;
+        warpField.visible = speed > 8;             // some quando você para
+      }
 
       // gera/descarta o universo conforme você voa
       updateChunks();
@@ -1278,13 +1657,23 @@
       proxDist = nearDist; proxNear = nearObj;  // alimenta a escala do próximo quadro
       lastNearObj = nearObj; // alvo do piloto automático (botão Viajar / tecla G)
       drawMinimap();         // atualiza o radar de canto
+      // ISS: suaviza o movimento até a posição real e gira o globo devagar
+      if(issPos && issDraw){
+        // lida com o "salto" do meridiano ±180° pra interpolar pelo caminho curto
+        let dLon=issPos.lon-issDraw.lon;
+        if(dLon>180) dLon-=360; else if(dLon<-180) dLon+=360;
+        issDraw.lat += (issPos.lat-issDraw.lat)*0.05;
+        issDraw.lon += dLon*0.05;
+      }
+      issSpin += dt*0.06;    // giro lento e contínuo do globo
+      drawGlobe();
 
       // ---------- FOTO REAL DA NASA: quando você se aproxima de um objeto ----------
       // catalogado e conhecido (a ~3000 unidades), busca a imagem verdadeira.
       maybeShowNasa(nearObj, nearDist);
 
       // ---------- ATUALIZA O PAINEL DA NAVE (estatísticas) ----------
-      updateHUD(speed, throttle, distTotal, camPos, fov, visibleCount, nearObj, nearDist);
+      updateHUD(speed, throttle, distTotal, camPos, fov, visibleCount, nearObj, nearDist, gamma);
 
       composer.render();   // renderiza COM o bloom
     }
